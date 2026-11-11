@@ -355,3 +355,4 @@ class PageRenderer(
         private const val MAX_SINGLE_BITMAP_BYTES = 22 * 1024 * 1024
 
     }
+}

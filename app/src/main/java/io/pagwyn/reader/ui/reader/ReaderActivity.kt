@@ -205,8 +205,8 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.btnSearch.setOnClickListener { openSearch() }
         binding.btnBookmark.setOnClickListener { toggleBookmark() }
         binding.btnMore.setOnClickListener { showMoreMenu(it) }
-        binding.btnZoomIn.setOnClickListener { zoomStep(in = true) }
-        binding.btnZoomOut.setOnClickListener { zoomStep(in = false) }
+        binding.btnZoomIn.setOnClickListener { zoomStep(increasing = true) }
+        binding.btnZoomOut.setOnClickListener { zoomStep(increasing = false) }
         binding.btnFit.setOnClickListener { cycleFitMode() }
         binding.btnReadingTheme.setOnClickListener { showAppearanceSheet() }
         binding.btnRotate.setOnClickListener { viewModel.rotate() }
