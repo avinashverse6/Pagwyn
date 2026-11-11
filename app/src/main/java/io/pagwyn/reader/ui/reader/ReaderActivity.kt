@@ -140,7 +140,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private fun setupWindow() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         updateKeepScreenOn()
-        applyBrightnessOverlay(settings.readingBrightness)
+        applyBrightnessOverlay((settings.readingBrightness * 100).toInt())
     }
 
     private fun updateKeepScreenOn() {
@@ -178,11 +178,12 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.pageList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateVisibleWindow()
-                if (dy != 0 && settings.hideControls && viewModel.state.value.controlsVisible &&
-                    viewModel.state.value.fullscreen.not()
-                ) {
-                    // Scrolling implies intent to read: hide chrome, but keep it
-                    // reachable with a tap.
+                if (dy != 0 && settings.hideControls && !viewModel.state.value.fullscreen) {
+                    // Scrolling means the user is reading: get the chrome out of the
+                    // way. A tap anywhere brings it back.
+                    if (viewModel.state.value.controlsVisible) {
+                        viewModel.setControlsVisible(false)
+                    }
                 }
             }
 
@@ -319,7 +320,11 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     }
 
     private fun applyBrightnessOverlay(percent: Int) {
-        val fraction = (percent.coerceIn(0, 100)) / 100f
+        applyBrightnessFraction(percent / 100f)
+    }
+
+    private fun applyBrightnessFraction(value: Float) {
+        val fraction = value.coerceIn(0f, 1f)
         // Only dim when the user asked for it: 100% means "no overlay".
         val alpha = if (fraction >= 0.995f) 0 else ((1f - fraction) * 0.72f * 255).toInt()
         binding.brightnessOverlay.isVisible = alpha > 0

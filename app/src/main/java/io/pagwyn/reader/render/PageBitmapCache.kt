@@ -2,6 +2,7 @@ package io.pagwyn.reader.render
 
 import android.graphics.Bitmap
 import android.os.Build
+import io.pagwyn.reader.PagwynApplication
 import java.util.LinkedHashMap
 
 /**
@@ -154,7 +155,8 @@ class PageBitmapCache(budgetBytes: Int) {
         }
 
         fun forDevice(): PageBitmapCache {
-            val activityManager = PagwynAppContext.get()?.getSystemService(android.app.ActivityManager::class.java)
+            val app = PagwynApplication.current()
+            val activityManager = app.getSystemService(android.app.ActivityManager::class.java)
             val memoryClass = activityManager?.memoryClass ?: 128
             return forMemoryClass(memoryClass)
         }

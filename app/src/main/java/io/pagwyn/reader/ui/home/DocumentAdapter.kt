@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.pagwyn.reader.R
 import io.pagwyn.reader.core.Formatters
 import io.pagwyn.reader.core.PagwynDocument
+import io.pagwyn.reader.ui.widget.colorFromAttr
 
 /**
  * RecyclerView adapters for document lists.
@@ -50,11 +51,9 @@ class DocumentRowAdapter(
             if (document.isStarred) R.drawable.ic_star_filled else R.drawable.ic_star,
         )
         holder.star.setColorFilter(
-            if (document.isStarred) {
-                androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.amber_500)
-            } else {
-                io.pagwyn.reader.ui.widget.colorFromAttr(holder.itemView.context, R.attr.pwOnSurfaceMuted)
-            },
+            holder.itemView.context.colorFromAttr(
+                if (document.isStarred) R.attr.pwPrimary else R.attr.pwOnSurfaceMuted,
+            ),
         )
         holder.star.contentDescription = holder.itemView.context.getString(
             if (document.isStarred) R.string.action_unstar else R.string.action_star,

@@ -41,7 +41,7 @@ object DocumentResolver {
             runCatching {
                 context.contentResolver.query(
                     uri,
-                    arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE, OpenableColumns.LAST_MODIFIED),
+                    arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE),
                     null,
                     null,
                     null,
@@ -51,8 +51,6 @@ object DocumentResolver {
                         if (nameIndex >= 0 && !cursor.isNull(nameIndex)) name = cursor.getString(nameIndex)
                         val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
                         if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex)
-                        val modIndex = cursor.getColumnIndex(OpenableColumns.LAST_MODIFIED)
-                        if (modIndex >= 0 && !cursor.isNull(modIndex)) modified = cursor.getLong(modIndex)
                     }
                 }
             }
@@ -66,8 +64,10 @@ object DocumentResolver {
             }
         }
 
-        if (size < 0 && scheme == "file") {
-            runCatching { size = File(uri.path ?: "").length() }.getOrNull()
+        if (scheme == "file") {
+            val file = File(uri.path ?: "")
+            if (size < 0) size = runCatching { file.length() }.getOrDefault(-1L)
+            modified = runCatching { file.lastModified() }.getOrDefault(0L)
         }
 
         val mime = runCatching { context.contentResolver.getType(uri) }

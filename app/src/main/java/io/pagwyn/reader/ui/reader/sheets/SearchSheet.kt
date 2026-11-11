@@ -123,12 +123,12 @@ class SearchSheet : PagwynSheet() {
     }
 
     private fun EditText.showKeyboard() {
-        val imm = context.getSystemService<InputMethodManager>() ?: return
+        val imm = this.context?.getSystemService<InputMethodManager>() ?: return
         imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun hideKeyboard() {
-        val imm = context.getSystemService<InputMethodManager>() ?: return
+        val imm = field.context?.getSystemService<InputMethodManager>() ?: return
         imm.hideSoftInputFromWindow(field.windowToken, 0)
     }
 

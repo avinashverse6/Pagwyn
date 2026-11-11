@@ -14,6 +14,7 @@ import io.pagwyn.reader.pdf.PdfOpenException
 import io.pagwyn.reader.render.PageBitmapCache.Companion.byteCount
 import io.pagwyn.reader.render.PageBitmapCache.Key
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.SupervisorJob
@@ -317,14 +318,23 @@ class PageRenderer(
 
     // ------------------------------------------------------------------ teardown
 
+    /**
+     * Releases the native renderer.
+     *
+     * Closing happens on the render thread (via a submitted task, not a blocking
+     * wait) so a UI call never blocks on a page that is mid-render. The executor is
+     * shut down afterwards, which is safe even if tasks are still queued.
+     */
     override fun close() {
         if (!closing.compareAndSet(false, true)) return
         runCatching {
-            kotlinx.coroutines.runBlocking(dispatcher) { closeInternal() }
-        }.onFailure { Log.w(TAG, "close failed", it) }
-        cache.clear()
+            executor.execute {
+                runCatching { document?.close() }
+                document = null
+                cache.clear()
+            }
+        }.onFailure { Log.w(TAG, "close scheduling failed", it) }
         runCatching { executor.shutdown() }
-        runCatching { dispatcher.close() }
     }
 
     private fun closeInternal() {

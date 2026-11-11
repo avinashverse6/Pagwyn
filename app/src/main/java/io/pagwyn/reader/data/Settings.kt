@@ -116,7 +116,7 @@ class Settings(private val context: Context) {
     }
 
     private companion object {
-        const val FILE_NAME = "pagwyn_prefs.xml".removeSuffix(".xml") // SharedPreferences adds .xml
+        const val FILE_NAME = "pagwyn_prefs"
         const val KEY_THEME = "theme"
         const val KEY_READER_THEME = "reader_theme"
         const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
