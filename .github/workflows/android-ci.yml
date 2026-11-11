@@ -188,11 +188,11 @@ jobs:
             echo
             echo "**Gradle failure lines**"
             echo '```'
-            grep -nE "FAILURE|What went wrong|Caused by|No connected devices|> |error:|Test .* FAILED|Installation|device .* not found" /tmp/instrumented.log 2>/dev/null | head -n 40 || echo "(no Gradle log: the emulator never started)"
+            grep -nE "FAILURE:|What went wrong|Caused by:|No connected devices|error:|FAILED|Execution failed|Installation|not found|IOException" /tmp/instrumented.log 2>/dev/null | head -n 30 || echo "(no Gradle log: the emulator never started)"
             echo '```'
-            echo "**Gradle output** (first 40 lines)"
+            echo "**Gradle output** (last 30 lines)"
             echo '```'
-            head -n 40 /tmp/instrumented.log 2>/dev/null || true
+            grep -vE "^\s+at |^> Task " /tmp/instrumented.log 2>/dev/null | tail -n 30 || true
             echo '```'
             echo "**Environment**"
             echo '```'
