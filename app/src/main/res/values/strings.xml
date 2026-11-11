@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="app_name">Pagwyn</string>
+    <string name="app_tagline">Read Without Distraction.</string>
+
+    <!-- ============================ Home ============================ -->
+    <string name="home_greeting">Your library</string>
+    <string name="home_continue_reading">Continue reading</string>
+    <string name="home_recent">Recently opened</string>
+    <string name="home_recent_empty">No recent documents yet</string>
+    <string name="home_recent_empty_body">Documents you open appear here, with your last reading position.</string>
+    <string name="home_starred">Starred</string>
+    <string name="home_starred_empty">Nothing starred yet</string>
+    <string name="home_history">Reading history</string>
+    <string name="home_browse">Browse files</string>
+    <string name="home_search">Search documents</string>
+    <string name="home_search_hint">Search documents by name</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_view_all">View all</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_remove_recent">Remove from recent</string>
+    <string name="home_resume_page">Resume page %1$d of %2$d</string>
+    <string name="home_no_match">No documents match “%1$s”</string>
+    <string name="home_search_empty">Search finds documents you have already opened, by title.</string>
+    <string name="home_privacy_note">Offline by design · No tracking · No accounts</string>
+
+    <!-- ============================ Reader ============================ -->
+    <string name="reader_page_of">%1$d / %2$d</string>
+    <string name="reader_search">Search in document</string>
+    <string name="reader_search_hint">Find text in this PDF</string>
+    <string name="reader_no_results">No matches found</string>
+    <string name="reader_results_count">%1$d matches</string>
+    <string name="reader_result_item">Page %1$d</string>
+    <string name="reader_bookmarks">Bookmarks</string>
+    <string name="reader_no_bookmarks">No bookmarks yet</string>
+    <string name="reader_add_bookmark">Bookmark this page</string>
+    <string name="reader_remove_bookmark">Remove bookmark</string>
+    <string name="reader_bookmark_added">Bookmark added</string>
+    <string name="reader_bookmark_removed">Bookmark removed</string>
+    <string name="reader_toc">Contents</string>
+    <string name="reader_no_toc">This document has no table of contents</string>
+    <string name="reader_go_to_page">Go to page</string>
+    <string name="reader_page_hint">Page number</string>
+    <string name="reader_page_invalid">Enter a page between 1 and %1$d</string>
+    <string name="reader_theme">Reading theme</string>
+    <string name="reader_theme_light">Light</string>
+    <string name="reader_theme_sepia">Sepia</string>
+    <string name="reader_theme_dark">Dark</string>
+    <string name="reader_mode_scroll">Continuous scroll</string>
+    <string name="reader_mode_single">Single page</string>
+    <string name="reader_zoom_fit_width">Fit width</string>
+    <string name="reader_zoom_fit_page">Fit page</string>
+    <string name="reader_brightness">Brightness</string>
+    <string name="reader_spacing">Page spacing</string>
+    <string name="reader_more">More</string>
+    <string name="reader_rotate">Rotate page</string>
+    <string name="reader_share">Share document</string>
+    <string name="reader_info">Document information</string>
+    <string name="reader_copy_text">Copy text</string>
+    <string name="reader_text_copied">Text copied</string>
+    <string name="reader_text_selection_unavailable">This page has no selectable text</string>
+    <string name="reader_zoom_level">%1$d%%</string>
+    <string name="reader_loading">Opening document…</string>
+    <string name="reader_page_rendering">Rendering page…</string>
+    <string name="reader_open_failed">Could not open this document</string>
+    <string name="reader_keep_screen_on">Keep screen on</string>
+    <string name="reader_fullscreen">Full-screen reading</string>
+    <string name="reader_thumbnails">Page thumbnails</string>
+    <string name="reader_jump_back">Back to page %1$d</string>
+    <string name="reader_percent">%1$d%% read</string>
+    <string name="reader_next_page">Next page</string>
+    <string name="reader_previous_page">Previous page</string>
+
+    <!-- ============================ Password ============================ -->
+    <string name="password_title">Protected document</string>
+    <string name="password_message">This PDF is encrypted. Enter the password to open it.</string>
+    <string name="password_hint">Password</string>
+    <string name="password_show">Show password</string>
+    <string name="password_hide">Hide password</string>
+    <string name="password_open">Open</string>
+    <string name="password_wrong">Incorrect password. Try again.</string>
+    <string name="password_new_title">Protected document</string>
+    <string name="password_new_message">This PDF is encrypted. Android\'s built-in PDF engine can open documents that use the standard security handler (RC4 or AES) with an empty owner restriction. Enter the password to continue.</string>
+    <string name="password_unsupported_title">Password not supported</string>
+    <string name="password_unsupported_message">This document uses an encryption method that the Android system PDF renderer on this device cannot open. Pagwyn will not downgrade the engine, because doing so would require bundling a heavy third-party renderer and significantly increase app size and memory use.</string>
+
+    <!-- ============================ Metadata ============================ -->
+    <string name="metadata_title">Document information</string>
+    <string name="metadata_file">File</string>
+    <string name="metadata_name">Name</string>
+    <string name="metadata_size">Size</string>
+    <string name="metadata_pages">Pages</string>
+    <string name="metadata_page_size">Page size</string>
+    <string name="metadata_producer">PDF producer</string>
+    <string name="metadata_encrypted">Encryption</string>
+    <string name="metadata_encrypted_yes">Password protected</string>
+    <string name="metadata_encrypted_no">Not encrypted</string>
+    <string name="metadata_location">Location</string>
+    <string name="metadata_added">Added</string>
+    <string name="metadata_last_read">Last read</string>
+    <string name="metadata_progress">Reading progress</string>
+    <string name="metadata_unknown">Unknown</string>
+    <string name="metadata_copy_path">Copy details</string>
+    <string name="metadata_open_failed">File is no longer accessible. Re-open it from its folder.</string>
+
+    <!-- ============================ Settings ============================ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_reading">Reading</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_about">About</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_app_theme">App theme</string>
+    <string name="settings_reader_theme">Reading theme</string>
+    <string name="settings_reader_theme_follow">Use app theme</string>
+    <string name="settings_keep_screen_on">Keep screen on while reading</string>
+    <string name="settings_keep_screen_on_desc">Prevents the screen from sleeping during reading</string>
+    <string name="settings_hide_controls">Hide controls while reading</string>
+    <string name="settings_hide_controls_desc">Toolbars fade out automatically and reappear on tap</string>
+    <string name="settings_page_spacing">Page spacing</string>
+    <string name="settings_default_mode">Default reading mode</string>
+    <string name="settings_default_zoom">Default zoom</string>
+    <string name="settings_default_zoom_fit_width">Fit width</string>
+    <string name="settings_default_zoom_fit_page">Fit page</string>
+    <string name="settings_default_zoom_actual">Actual size</string>
+    <string name="settings_history_size">Recently opened history</string>
+    <string name="settings_clear_history">Clear recent documents</string>
+    <string name="settings_clear_history_desc">Removes recent documents and saved reading positions. The PDF files themselves are not deleted.</string>
+    <string name="settings_clear_history_done">Recent documents cleared</string>
+    <string name="settings_confirm_clear">Clear recent documents?</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_license">Open source · GNU GPL v3.0</string>
+    <string name="settings_source">Source code</string>
+    <string name="settings_offline">Pagwyn never sends your documents anywhere. It has no internet permission.</string>
+
+    <!-- ============================ Common ============================ -->
+    <string name="action_open">Open</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_close">Close</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_done">Done</string>
+    <string name="action_ok">OK</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_star">Star</string>
+    <string name="action_unstar">Remove star</string>
+    <string name="action_share">Share</string>
+    <string name="action_info">Info</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_search">Search</string>
+    <string name="action_open_with_pagwyn">Open with Pagwyn</string>
+    <string name="cd_open_document">Open a PDF document</string>
+    <string name="cd_navigate_back">Navigate back</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_toggle_controls">Show or hide reading controls</string>
+    <string name="cd_thumbnail">Page thumbnail</string>
+    <string name="error_no_app">No app can open this file</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+
+    <!-- No-Storage-Access-required file picker -->
+    <string name="picker_title">Choose a PDF</string>
+
+    <string-array name="page_spacing_entries">
+        <item>None</item>
+        <item>Compact</item>
+        <item>Normal</item>
+        <item>Wide</item>
+    </string-array>
+    <string-array name="page_spacing_values">
+        <item>0</item>
+        <item>4</item>
+        <item>10</item>
+        <item>20</item>
+    </string-array>
+
+    <string-array name="history_size_entries">
+        <item>10 documents</item>
+        <item>25 documents</item>
+        <item>50 documents</item>
+        <item>100 documents</item>
+    </string-array>
+    <string-array name="history_size_values">
+        <item>10</item>
+        <item>25</item>
+        <item>50</item>
+        <item>100</item>
+    </string-array>
+
+    <string name="shortcut_open_short" translatable="false">Open PDF</string>
+    <string name="shortcut_open_long" translatable="false">Open a PDF with Pagwyn</string>
+    <string name="shortcut_continue_short" translatable="false">Continue reading</string>
+    <string name="shortcut_continue_long" translatable="false">Resume your last document</string>
+</resources>

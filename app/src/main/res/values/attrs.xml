@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Semantic theme attributes.
+
+      Using attributes (instead of direct colour references) keeps every view,
+      drawable and shape automatically correct across light, dark and sepia modes.
+    -->
+    <attr name="pwSurface" format="color" />
+    <attr name="pwSurfaceRaised" format="color" />
+    <attr name="pwSurfaceSunken" format="color" />
+    <attr name="pwOnSurface" format="color" />
+    <attr name="pwOnSurfaceMuted" format="color" />
+    <attr name="pwPrimary" format="color" />
+    <attr name="pwOnPrimary" format="color" />
+    <attr name="pwPrimaryMuted" format="color" />
+    <attr name="pwOutline" format="color" />
+    <attr name="pwOutlineStrong" format="color" />
+    <attr name="pwDanger" format="color" />
+    <attr name="pwReaderBackground" format="color" />
+    <attr name="pwToolbarBackground" format="color" />
+    <attr name="pwThumbBackground" format="color" />
+    <attr name="pwScrim" format="color" />
+    <attr name="pwRipple" format="color" />
+</resources>

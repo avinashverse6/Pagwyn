@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Dark theme. Pagwyn keeps the dark theme genuinely dark (ink navy, not pure
+      black) so OLED panels stay comfortable and the amber accent keeps its warmth.
+    -->
+    <style name="Base.Theme.Pagwyn" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColorPrimary">?attr/pwOnSurface</item>
+        <item name="android:textColorSecondary">?attr/pwOnSurfaceMuted</item>
+        <item name="android:textColorHint">?attr/pwOnSurfaceMuted</item>
+        <item name="android:colorBackground">?attr/pwSurface</item>
+
+        <item name="android:windowBackground">?attr/pwSurface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">?attr/pwSurface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+
+        <item name="colorPrimary">?attr/pwPrimary</item>
+        <item name="colorPrimaryDark">?attr/pwSurface</item>
+        <item name="colorAccent">?attr/pwPrimary</item>
+        <item name="colorControlActivated">?attr/pwPrimary</item>
+        <item name="android:colorControlActivated">?attr/pwPrimary</item>
+
+        <item name="pwSurface">@color/ink_900</item>
+        <item name="pwSurfaceRaised">@color/ink_800</item>
+        <item name="pwSurfaceSunken">@color/ink_850</item>
+        <item name="pwOnSurface">@color/paper_text</item>
+        <item name="pwOnSurfaceMuted">@color/paper_text_muted</item>
+        <item name="pwPrimary">@color/amber_400</item>
+        <item name="pwOnPrimary">@color/ink_900</item>
+        <item name="pwPrimaryMuted">@color/ink_700</item>
+        <item name="pwOutline">@color/ink_700</item>
+        <item name="pwOutlineStrong">@color/ink_600</item>
+        <item name="pwDanger">@color/danger_dark</item>
+        <item name="pwReaderBackground">@color/reader_dark</item>
+        <item name="pwToolbarBackground">@color/ink_850</item>
+        <item name="pwThumbBackground">@color/ink_800</item>
+        <item name="pwScrim">@color/scrim_dark</item>
+        <item name="pwRipple">#24FFFFFF</item>
+    </style>
+
+    <style name="Theme.Pagwyn" parent="Base.Theme.Pagwyn" />
+
+    <style name="Theme.Pagwyn.Reader" parent="Base.Theme.Pagwyn">
+        <item name="android:windowBackground">?attr/pwReaderBackground</item>
+    </style>
+</resources>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Pagwyn palette.
+
+      The identity borrows from print: deep ink navy, warm paper, and a single
+      amber accent that marks the user's position (progress, bookmarks, actions).
+      These raw colours are only referenced from themes; UI code always reads the
+      semantic attributes declared in attrs.xml so light/dark/sepia stay consistent.
+    -->
+
+    <!-- Ink (dark surfaces) -->
+    <color name="ink_900">#FF161922</color>
+    <color name="ink_850">#FF1B1F2B</color>
+    <color name="ink_800">#FF232838</color>
+    <color name="ink_700">#FF2E3446</color>
+    <color name="ink_600">#FF3C4358</color>
+
+    <!-- Paper (light surfaces) -->
+    <color name="paper_050">#FFFDFBF7</color>
+    <color name="paper_100">#FFF8F4EC</color>
+    <color name="paper_200">#FFF1EBE0</color>
+    <color name="paper_300">#FFE6DECE</color>
+    <color name="paper_400">#FFD6CCB8</color>
+
+    <!-- Amber accent -->
+    <color name="amber_600">#FFB86A18</color>
+    <color name="amber_500">#FFC87C26</color>
+    <color name="amber_400">#FFE8A455</color>
+    <color name="amber_200">#FFF3D3A8</color>
+
+    <!-- Supporting -->
+    <color name="ink_text">#FF1C2030</color>
+    <color name="ink_text_muted">#FF5B6274</color>
+    <color name="paper_text">#FFF1EDE5</color>
+    <color name="paper_text_muted">#FFA8ADBD</color>
+    <color name="danger_light">#FFB3261E</color>
+    <color name="danger_dark">#FFF2B8B5</color>
+
+    <!-- Reading surfaces (never tint PDF content) -->
+    <color name="reader_light">#FFE9E5DC</color>
+    <color name="reader_dark">#FF0E1016</color>
+    <color name="reader_sepia">#FFF0E6D2</color>
+    <color name="reader_sepia_toolbar">#FFE7DBC2</color>
+
+    <color name="scrim_light">#14000000</color>
+    <color name="scrim_dark">#40000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="launcher_background">#FF1E2231</color>
+</resources>

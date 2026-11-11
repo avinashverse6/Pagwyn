@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing scale (4dp grid) -->
+    <dimen name="space_1">4dp</dimen>
+    <dimen name="space_2">8dp</dimen>
+    <dimen name="space_3">12dp</dimen>
+    <dimen name="space_4">16dp</dimen>
+    <dimen name="space_5">20dp</dimen>
+    <dimen name="space_6">24dp</dimen>
+    <dimen name="space_8">32dp</dimen>
+    <dimen name="space_10">40dp</dimen>
+
+    <dimen name="screen_margin">20dp</dimen>
+    <dimen name="toolbar_height">56dp</dimen>
+    <dimen name="touch_target">48dp</dimen>
+    <dimen name="thumb_width">104dp</dimen>
+    <dimen name="thumb_height">140dp</dimen>
+    <dimen name="page_spacing_default">8dp</dimen>
+    <dimen name="corner_small">8dp</dimen>
+    <dimen name="corner_medium">14dp</dimen>
+    <dimen name="corner_large">22dp</dimen>
+</resources>

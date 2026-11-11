@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Base.Theme.Pagwyn" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Text appearance defaults -->
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColorPrimary">?attr/pwOnSurface</item>
+        <item name="android:textColorSecondary">?attr/pwOnSurfaceMuted</item>
+        <item name="android:textColorHint">?attr/pwOnSurfaceMuted</item>
+        <item name="android:colorBackground">?attr/pwSurface</item>
+
+        <!-- Window -->
+        <item name="android:windowBackground">?attr/pwSurface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">?attr/pwSurface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+
+        <!-- AppCompat mappings so dialogs/menus inherit Pagwyn colours -->
+        <item name="colorPrimary">?attr/pwPrimary</item>
+        <item name="colorPrimaryDark">?attr/pwSurface</item>
+        <item name="colorAccent">?attr/pwPrimary</item>
+        <item name="colorControlActivated">?attr/pwPrimary</item>
+        <item name="android:colorControlActivated">?attr/pwPrimary</item>
+
+        <item name="pwSurface">@color/paper_100</item>
+        <item name="pwSurfaceRaised">@color/paper_050</item>
+        <item name="pwSurfaceSunken">@color/paper_200</item>
+        <item name="pwOnSurface">@color/ink_text</item>
+        <item name="pwOnSurfaceMuted">@color/ink_text_muted</item>
+        <item name="pwPrimary">@color/amber_600</item>
+        <item name="pwOnPrimary">#FFFFFFFF</item>
+        <item name="pwPrimaryMuted">@color/amber_200</item>
+        <item name="pwOutline">@color/paper_300</item>
+        <item name="pwOutlineStrong">@color/paper_400</item>
+        <item name="pwDanger">@color/danger_light</item>
+        <item name="pwReaderBackground">@color/reader_light</item>
+        <item name="pwToolbarBackground">@color/paper_050</item>
+        <item name="pwThumbBackground">@color/paper_200</item>
+        <item name="pwScrim">@color/scrim_light</item>
+        <item name="pwRipple">#1F000000</item>
+
+        <item name="android:windowAnimationStyle">@style/Animation.Pagwyn</item>
+    </style>
+
+    <style name="Theme.Pagwyn" parent="Base.Theme.Pagwyn" />
+
+    <!-- Reader keeps a darker chrome so the page stays the brightest element. -->
+    <style name="Theme.Pagwyn.Reader" parent="Base.Theme.Pagwyn">
+        <item name="android:windowBackground">?attr/pwReaderBackground</item>
+        <item name="pwToolbarBackground">@color/paper_050</item>
+    </style>
+
+    <style name="Animation.Pagwyn" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/pw_slide_in</item>
+        <item name="android:activityOpenExitAnimation">@anim/pw_fade_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/pw_fade_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/pw_slide_out</item>
+    </style>
+
+    <!-- ====================== Typography ====================== -->
+
+    <style name="Text.Pagwyn.Display" parent="">
+        <item name="android:textSize">34sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Text.Pagwyn.Title" parent="">
+        <item name="android:textSize">21sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+    </style>
+
+    <style name="Text.Pagwyn.Section" parent="">
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0.11</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/pwOnSurfaceMuted</item>
+    </style>
+
+    <style name="Text.Pagwyn.Body" parent="">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+        <item name="android:lineSpacingMultiplier">1.25</item>
+    </style>
+
+    <style name="Text.Pagwyn.Caption" parent="">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?attr/pwOnSurfaceMuted</item>
+    </style>
+
+    <style name="Text.Pagwyn.Label" parent="">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+    </style>
+
+    <!-- ====================== Components ====================== -->
+
+    <style name="Widget.Pagwyn.IconButton" parent="">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@drawable/bg_icon_button</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="tint">?attr/pwOnSurface</item>
+        <item name="android:contentDescription">@null</item>
+    </style>
+
+    <style name="Widget.Pagwyn.Button.Primary" parent="">
+        <item name="android:layout_height">52dp</item>
+        <item name="android:background">@drawable/bg_button_primary</item>
+        <item name="android:textColor">?attr/pwOnPrimary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="Widget.Pagwyn.Button.Secondary" parent="Widget.Pagwyn.Button.Primary">
+        <item name="android:background">@drawable/bg_button_secondary</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+    </style>
+
+    <style name="Widget.Pagwyn.Card" parent="">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:padding">12dp</item>
+    </style>
+</resources>
