@@ -1,4 +1,349 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/readerRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:background="?attr/pwReaderBackground">
+
+    <!-- Page content. Fills the window: the document must be the visual priority. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/pageList"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        tools:listitem="@layout/item_page" />
+
+    <!-- Single page mode container -->
+    <FrameLayout
+        android:id="@+id/singlePageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- Loading state -->
+    <LinearLayout
+        android:id="@+id/loadingPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/loadingSpinner"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:indeterminateTint="?attr/pwPrimary" />
+
+        <TextView
+            android:id="@+id/loadingLabel"
+            style="@style/Text.Pagwyn.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:text="@string/reader_loading" />
+    </LinearLayout>
+
+    <!-- Error state: never a dead end, always offers a way back. -->
+    <LinearLayout
+        android:id="@+id/errorPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_8"
+        android:paddingEnd="@dimen/space_8"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_pdf_doc"
+            android:tint="?attr/pwOnSurfaceMuted" />
+
+        <TextView
+            android:id="@+id/errorTitle"
+            style="@style/Text.Pagwyn.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:gravity="center"
+            android:text="@string/reader_open_failed" />
+
+        <TextView
+            android:id="@+id/errorBody"
+            style="@style/Text.Pagwyn.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_2"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.3" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_5"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/errorClose"
+                style="@style/Widget.Pagwyn.Button.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="@string/action_close" />
+
+            <Button
+                android:id="@+id/errorRetry"
+                style="@style/Widget.Pagwyn.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_2"
+                android:text="@string/action_retry"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ======================= Top bar ======================= -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/pwToolbarBackground"
+        android:elevation="2dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_1"
+            android:paddingEnd="@dimen/space_1">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/cd_navigate_back"
+                android:src="@drawable/ic_back" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_1"
+                android:paddingEnd="@dimen/space_2">
+
+                <TextView
+                    android:id="@+id/documentTitle"
+                    style="@style/Text.Pagwyn.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Deep Work" />
+
+                <TextView
+                    android:id="@+id/documentSubtitle"
+                    style="@style/Text.Pagwyn.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textSize="12sp"
+                    tools:text="42 of 380 · 4.2 MB" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnBookmark"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_add_bookmark"
+                android:src="@drawable/ic_bookmark" />
+
+            <ImageButton
+                android:id="@+id/btnSearch"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_search"
+                android:src="@drawable/ic_search" />
+
+            <ImageButton
+                android:id="@+id/btnMore"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/cd_more_options"
+                android:src="@drawable/ic_more_vert" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/readingProgressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:max="1000"
+            android:progressDrawable="@drawable/bg_progress_track" />
+    </LinearLayout>
+
+    <!-- ======================= Bottom bar ======================= -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="?attr/pwToolbarBackground"
+        android:elevation="2dp"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/space_1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_2"
+            android:paddingEnd="@dimen/space_2">
+
+            <ImageButton
+                android:id="@+id/btnThumbnails"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_thumbnails"
+                android:src="@drawable/ic_thumbnails" />
+
+            <ImageButton
+                android:id="@+id/btnToc"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_toc"
+                android:src="@drawable/ic_toc" />
+
+            <ImageButton
+                android:id="@+id/btnZoomOut"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_zoom_level"
+                android:src="@drawable/ic_zoom_out" />
+
+            <TextView
+                android:id="@+id/zoomLabel"
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:minWidth="52dp"
+                android:textColor="?attr/pwOnSurface"
+                android:textSize="13sp"
+                tools:text="100%" />
+
+            <ImageButton
+                android:id="@+id/btnZoomIn"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_zoom_level"
+                android:src="@drawable/ic_zoom_in" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btnFit"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_zoom_fit_width"
+                android:src="@drawable/ic_fit_width" />
+
+            <ImageButton
+                android:id="@+id/btnReadingTheme"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_theme"
+                android:src="@drawable/ic_text_format" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_4"
+            android:paddingEnd="@dimen/space_4"
+            android:paddingBottom="@dimen/space_1">
+
+            <ImageButton
+                android:id="@+id/btnPrevPage"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_previous_page"
+                android:src="@drawable/ic_chevron_left" />
+
+            <TextView
+                android:id="@+id/pageIndicator"
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/pwSurfaceSunken"
+                android:paddingStart="@dimen/space_4"
+                android:paddingTop="@dimen/space_1"
+                android:paddingEnd="@dimen/space_4"
+                android:paddingBottom="@dimen/space_1"
+                android:textColor="?attr/pwOnSurface"
+                android:textSize="13sp"
+                tools:text="42 / 380" />
+
+            <ImageButton
+                android:id="@+id/btnNextPage"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_next_page"
+                android:src="@drawable/ic_chevron_right" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/btnRotate"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_rotate"
+                android:src="@drawable/ic_rotate" />
+
+            <ImageButton
+                android:id="@+id/btnBrightness"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_brightness"
+                android:src="@drawable/ic_brightness" />
+
+            <ImageButton
+                android:id="@+id/btnShare"
+                style="@style/Widget.Pagwyn.IconButton"
+                android:contentDescription="@string/reader_share"
+                android:src="@drawable/ic_share" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Brightness overlay: dims the whole reading surface, never the PDF pixels. -->
+    <View
+        android:id="@+id/brightnessOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
+    <!-- Transient page badge shown while turning pages in single-page mode. -->
+    <TextView
+        android:id="@+id/transientPageBadge"
+        style="@style/Text.Pagwyn.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="112dp"
+        android:background="@drawable/bg_badge"
+        android:paddingStart="@dimen/space_4"
+        android:paddingTop="@dimen/space_1"
+        android:paddingEnd="@dimen/space_4"
+        android:paddingBottom="@dimen/space_1"
+        android:textColor="?attr/pwOnSurface"
+        android:visibility="gone" />
+
+</FrameLayout>

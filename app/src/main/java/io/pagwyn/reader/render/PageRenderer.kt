@@ -281,6 +281,22 @@ class PageRenderer(
         cache.evictRemote(minPage, maxPage)
     }
 
+    /**
+     * Renders a page at a small width for the thumbnail grid.
+     *
+     * Thumbnails are not cached in [cache]: the sheet keeps its own budget and
+     * disposing the sheet frees everything at once.
+     */
+    suspend fun renderThumbnail(page: Int, widthPx: Int): Bitmap? = withContext(dispatcher) {
+        val doc = document ?: return@withContext null
+        if (page !in 0 until doc.pageCount) return@withContext null
+        val info = runCatching { doc.pageInfo(page) }.getOrNull() ?: return@withContext null
+        val (w, h) = dimensionsFor(info, widthPx, 0)
+        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull() ?: return@withContext null
+        val ok = runCatching { doc.renderPage(page, bitmap, w, h) }.getOrDefault(false)
+        if (ok) bitmap else null.also { bitmap.recycleSafely() }
+    }
+
     // ------------------------------------------------------------------ text & search
 
     suspend fun pageText(page: Int): String? = withContext(dispatcher) {

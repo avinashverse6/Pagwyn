@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/pwSurface"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/space_5">
+
+    <include layout="@layout/view_sheet_header" />
+
+    <TextView
+        style="@style/Text.Pagwyn.Section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingTop="@dimen/space_2"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_2"
+        android:text="@string/settings_reader_theme" />
+
+    <LinearLayout
+        android:id="@+id/themeRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin">
+
+        <Button
+            android:id="@+id/themeLight"
+            style="@style/Widget.Pagwyn.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="@string/reader_theme_light"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/themeSepia"
+            style="@style/Widget.Pagwyn.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="@dimen/space_2"
+            android:layout_weight="1"
+            android:text="@string/reader_theme_sepia"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/themeDark"
+            style="@style/Widget.Pagwyn.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="@dimen/space_2"
+            android:layout_weight="1"
+            android:text="@string/reader_theme_dark"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/Text.Pagwyn.Section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingTop="@dimen/space_5"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_2"
+        android:text="@string/settings_default_mode" />
+
+    <LinearLayout
+        android:id="@+id/modeRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin">
+
+        <Button
+            android:id="@+id/modeScroll"
+            style="@style/Widget.Pagwyn.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="@string/reader_mode_scroll"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/modeSingle"
+            style="@style/Widget.Pagwyn.Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="@dimen/space_2"
+            android:layout_weight="1"
+            android:text="@string/reader_mode_single"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/Text.Pagwyn.Section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingTop="@dimen/space_5"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_1"
+        android:text="@string/reader_spacing" />
+
+    <SeekBar
+        android:id="@+id/spacingSeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_4"
+        android:layout_marginEnd="@dimen/space_4"
+        android:max="20"
+        android:progressTint="?attr/pwPrimary"
+        android:thumbTint="?attr/pwPrimary" />
+
+    <TextView
+        style="@style/Text.Pagwyn.Section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingTop="@dimen/space_4"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_1"
+        android:text="@string/reader_brightness" />
+
+    <SeekBar
+        android:id="@+id/brightnessSeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_4"
+        android:layout_marginEnd="@dimen/space_4"
+        android:max="100"
+        android:progressTint="?attr/pwPrimary"
+        android:thumbTint="?attr/pwPrimary" />
+</LinearLayout>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/pwSurface"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/space_5">
+
+    <include layout="@layout/view_sheet_header" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin">
+
+        <EditText
+            android:id="@+id/pageField"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_search_field"
+            android:hint="@string/reader_page_hint"
+            android:imeOptions="actionGo"
+            android:importantForAutofill="no"
+            android:inputType="number"
+            android:maxLines="1"
+            android:paddingStart="@dimen/space_4"
+            android:paddingEnd="@dimen/space_4"
+            android:textColor="?attr/pwOnSurface"
+            android:textColorHint="?attr/pwOnSurfaceMuted"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/gotoConfirm"
+            style="@style/Widget.Pagwyn.Button.Primary"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_marginStart="@dimen/space_3"
+            android:text="@string/action_open" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/gotoHint"
+        style="@style/Text.Pagwyn.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingTop="@dimen/space_2"
+        android:paddingEnd="@dimen/screen_margin" />
+
+    <SeekBar
+        android:id="@+id/pageSeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_4"
+        android:layout_marginTop="@dimen/space_3"
+        android:layout_marginEnd="@dimen/space_4"
+        android:progressTint="?attr/pwPrimary"
+        android:thumbTint="?attr/pwPrimary" />
+</LinearLayout>

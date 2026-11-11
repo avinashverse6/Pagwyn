@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Column counts are chosen so a thumbnail is never smaller than ~64dp. -->
+    <integer name="thumbnail_columns">3</integer>
+    <integer name="library_columns_landscape">4</integer>
+</resources>

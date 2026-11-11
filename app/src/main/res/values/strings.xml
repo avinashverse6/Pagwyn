@@ -31,11 +31,13 @@
     <string name="reader_search_hint">Find text in this PDF</string>
     <string name="reader_no_results">No matches found</string>
     <string name="reader_results_count">%1$d matches</string>
+    <string name="reader_searching">Searching…</string>
     <string name="reader_result_item">Page %1$d</string>
     <string name="reader_bookmarks">Bookmarks</string>
     <string name="reader_no_bookmarks">No bookmarks yet</string>
     <string name="reader_add_bookmark">Bookmark this page</string>
     <string name="reader_remove_bookmark">Remove bookmark</string>
+    <string name="reader_bookmark_page">Page %1$d</string>
     <string name="reader_bookmark_added">Bookmark added</string>
     <string name="reader_bookmark_removed">Bookmark removed</string>
     <string name="reader_toc">Contents</string>
@@ -43,6 +45,7 @@
     <string name="reader_go_to_page">Go to page</string>
     <string name="reader_page_hint">Page number</string>
     <string name="reader_page_invalid">Enter a page between 1 and %1$d</string>
+    <string name="reader_page_range">This document has %1$d pages</string>
     <string name="reader_theme">Reading theme</string>
     <string name="reader_theme_light">Light</string>
     <string name="reader_theme_sepia">Sepia</string>
@@ -61,6 +64,9 @@
     <string name="reader_text_copied">Text copied</string>
     <string name="reader_text_selection_unavailable">This page has no selectable text</string>
     <string name="reader_zoom_level">%1$d%%</string>
+    <string name="reader_zoom_actual">Actual size</string>
+    <string name="reader_fullscreen_on">Full-screen reading</string>
+    <string name="reader_fullscreen_off">Controls restored</string>
     <string name="reader_loading">Opening document…</string>
     <string name="reader_page_rendering">Rendering page…</string>
     <string name="reader_open_failed">Could not open this document</string>
@@ -165,6 +171,11 @@
 
     <!-- No-Storage-Access-required file picker -->
     <string name="picker_title">Choose a PDF</string>
+
+    <plurals name="reader_matches">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
 
     <string-array name="page_spacing_entries">
         <item>None</item>
