@@ -6,40 +6,22 @@ import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 
 /**
- * Vertical layout manager with two personalities:
+ * Vertical layout manager shared by both reading modes.
  *
- *  - **Continuous mode**: ordinary vertical scrolling with free fling.
- *  - **Single-page mode**: exact page snapping, like a pager, while still being the
- *    same RecyclerView. Sharing one view hierarchy means switching modes never
- *    rebinds the whole document, never loses the zoom of the page you were reading,
- *    and never allocates a second render pipeline.
+ * Single-page mode is implemented with a [PagerSnapHelper] attached to the very
+ * same RecyclerView: switching modes never rebinds the document, never loses the
+ * zoom of the page being read, and needs no second render pipeline.
  */
 class SnappingLayoutManager(context: Context) : LinearLayoutManager(context) {
 
-    var snapToPages: Boolean = false
-        set(value) {
-            if (field == value) return
-            field = value
-            if (value) {
-                snapHelper?.attachToRecyclerView(recyclerView)
-            } else {
-                snapHelper?.attachToRecyclerView(null)
-            }
-        }
+    private val pagerSnap = PagerSnapHelper()
 
-    private val snapHelper: PagerSnapHelper? by lazy { PagerSnapHelper() }
-
-    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
-        super.onAttachedToRecyclerView(recyclerView)
-        if (snapToPages) snapHelper?.attachToRecyclerView(recyclerView)
+    /** Enables page-by-page snapping (single-page mode). */
+    fun setSnapToPages(recyclerView: RecyclerView, enabled: Boolean) {
+        pagerSnap.attachToRecyclerView(if (enabled) recyclerView else null)
     }
 
-    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
-        snapHelper?.attachToRecyclerView(null)
-        super.onDetachedFromRecyclerView(recyclerView)
-    }
-
-    /** Page that is closest to the top of the viewport. */
+    /** Index of the page that currently owns the top of the viewport. */
     fun pageAtTop(): Int {
         val position = findFirstVisibleItemPosition()
         if (position == RecyclerView.NO_POSITION) return RecyclerView.NO_POSITION

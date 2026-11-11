@@ -392,7 +392,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
      * page snapping, which keeps zoom state, cache and scrolling in a single place.
      */
     private fun syncMode(mode: ReadingMode) {
-        layoutManager?.snapToPages = mode == ReadingMode.SINGLE_PAGE
+        layoutManager?.setSnapToPages(binding.pageList, mode == ReadingMode.SINGLE_PAGE)
         binding.pageList.isVisible = hasPages()
         binding.singlePageContainer.isVisible = false
         applyContentInsets()
