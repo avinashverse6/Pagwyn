@@ -186,9 +186,13 @@ jobs:
           {
             echo "### Instrumented tests did not pass (${{ steps.emulator.outcome }})"
             echo
-            echo "**Gradle output** (last 120 lines)"
+            echo "**Gradle failure lines**"
             echo '```'
-            tail -n 120 /tmp/instrumented.log 2>/dev/null || echo "(no Gradle log: the emulator never started)"
+            grep -nE "FAILURE|What went wrong|Caused by|No connected devices|> |error:|Test .* FAILED|Installation|device .* not found" /tmp/instrumented.log 2>/dev/null | head -n 40 || echo "(no Gradle log: the emulator never started)"
+            echo '```'
+            echo "**Gradle output** (first 40 lines)"
+            echo '```'
+            head -n 40 /tmp/instrumented.log 2>/dev/null || true
             echo '```'
             echo "**Environment**"
             echo '```'
