@@ -109,6 +109,16 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Brightness overlay: dims the whole reading surface, never the PDF pixels. -->
+    <View
+        android:id="@+id/brightnessOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
     <!-- ======================= Top bar ======================= -->
     <LinearLayout
         android:id="@+id/topBar"
@@ -319,16 +329,6 @@
                 android:src="@drawable/ic_share" />
         </LinearLayout>
     </LinearLayout>
-
-    <!-- Brightness overlay: dims the whole reading surface, never the PDF pixels. -->
-    <View
-        android:id="@+id/brightnessOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#FF000000"
-        android:clickable="false"
-        android:focusable="false"
-        android:visibility="gone" />
 
     <!-- Transient page badge shown while turning pages in single-page mode. -->
     <TextView

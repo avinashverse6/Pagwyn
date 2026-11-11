@@ -139,7 +139,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private fun setupWindow() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         updateKeepScreenOn()
-        applyBrightnessOverlay((settings.readingBrightness * 100).toInt())
+        applyBrightnessOverlay(settings.readingBrightnessPercent)
     }
 
     private fun updateKeepScreenOn() {
@@ -372,17 +372,20 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.documentSubtitle.setTextColor(if (isDark) 0xFFA8ADBD.toInt() else 0xFF5B6274.toInt())
     }
 
+    /**
+     * Dims the reading surface without touching the PDF pixels.
+     *
+     * An overlay (rather than a window brightness change) keeps the document colours
+     * exactly as authored and leaves the rest of the system untouched. It is never
+     * clickable, so taps still reach the page.
+     */
     private fun applyBrightnessOverlay(percent: Int) {
-        applyBrightnessFraction(percent / 100f)
-    }
-
-    private fun applyBrightnessFraction(value: Float) {
-        val fraction = value.coerceIn(0f, 1f)
-        // Only dim when the user asked for it: 100% means "no overlay".
-        val alpha = if (fraction >= 0.995f) 0 else ((1f - fraction) * 0.72f * 255).toInt()
+        val fraction = percent.coerceIn(0, 100) / 100f
+        val alpha = ((1f - fraction) * 0.78f * 255).toInt().coerceIn(0, 200)
         binding.brightnessOverlay.isVisible = alpha > 0
         binding.brightnessOverlay.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
-        if (alpha == 0) binding.brightnessOverlay.isVisible = false
+        binding.brightnessOverlay.isClickable = false
+        binding.brightnessOverlay.isFocusable = false
     }
 
     // ------------------------------------------------------------------ mode handling
@@ -902,7 +905,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
             theme = state.theme
             mode = state.mode
             spacingDp = settings.pageSpacingDp
-            brightness = (settings.readingBrightness * 100).toInt().takeIf { it > 0 } ?: 100
+            brightness = settings.readingBrightnessPercent
             onThemeChanged = { viewModel.setTheme(it) }
             onModeChanged = { viewModel.setMode(it) }
             onSpacingChanged = { dp ->
@@ -910,7 +913,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
                 applyPageSpacing(dp)
             }
             onBrightnessChanged = { percent ->
-                settings.readingBrightness = percent / 100f
+                settings.readingBrightnessPercent = percent
                 applyBrightnessOverlay(percent)
             }
         }
@@ -1022,6 +1025,15 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         super.onConfigurationChanged(newConfig)
         binding.pageList.post { updateVisibleWindow() }
     }
+
+    /**
+     * Current reader state.
+     *
+     * Only used by instrumented tests, which must assert against the same state the
+     * UI renders rather than scraping view text.
+     */
+    @androidx.annotation.VisibleForTesting
+    fun viewModelSnapshot(): ReaderState = viewModel.state.value
 
     companion object {
         private const val EXTRA_START_PAGE = "io.pagwyn.reader.extra.START_PAGE"

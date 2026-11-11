@@ -91,10 +91,15 @@ class Settings(private val context: Context) {
         get() = prefs.getInt(KEY_HISTORY_LIMIT, 25)
         set(value) = prefs.edit { putInt(KEY_HISTORY_LIMIT, value) }
 
-    /** 0..1 screen brightness override while reading; <= 0 means "follow system". */
-    var readingBrightness: Float
-        get() = prefs.getFloat(KEY_BRIGHTNESS, 0f)
-        set(value) = prefs.edit { putFloat(KEY_BRIGHTNESS, value) }
+    /**
+     * Screen dimming while reading, 0..1 (1 = no dimming).
+     *
+     * Stored as a percentage because 0 is a legitimate value (darkest) and must be
+     * distinguishable from "never set", which defaults to 100%.
+     */
+    var readingBrightnessPercent: Int
+        get() = prefs.getInt(KEY_BRIGHTNESS, 100).coerceIn(5, 100)
+        set(value) = prefs.edit { putInt(KEY_BRIGHTNESS, value.coerceIn(5, 100)) }
 
     var lastDocumentUri: String?
         get() = prefs.getString(KEY_LAST_DOC, null)

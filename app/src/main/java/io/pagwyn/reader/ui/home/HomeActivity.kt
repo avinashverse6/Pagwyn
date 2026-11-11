@@ -300,6 +300,10 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /** Reader/library state for instrumented tests. */
+    @androidx.annotation.VisibleForTesting
+    fun viewModelSnapshot(): HomeState = viewModel.state.value
+
     private companion object {
         const val ACTION_CONTINUE_READING = "io.pagwyn.reader.action.CONTINUE_READING"
         const val MENU_OPEN = 1
