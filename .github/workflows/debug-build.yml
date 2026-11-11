@@ -34,6 +34,26 @@ jobs:
           echo "exit=$?" >> "$GITHUB_OUTPUT"
           grep -nE "^e: |error:|ERROR|FAILURE|What went wrong|Execution failed|Caused by|\.xml:" /tmp/build.log | head -150 > /tmp/errors.txt
           tail -n 25 /tmp/build.log >> /tmp/errors.txt
+      - name: Collect test failures
+        if: always()
+        run: |
+          python3 - <<'PY' >> /tmp/errors.txt
+          import glob, xml.etree.ElementTree as ET
+          out = []
+          for path in glob.glob('app/build/test-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for failure in list(case):
+                      if failure.tag in ('failure', 'error'):
+                          msg = (failure.get('message') or '').strip().splitlines()
+                          out.append(f"{case.get('classname')}.{case.get('name')}: {(msg[0] if msg else '')[:300]}")
+          print('\n### TEST FAILURES')
+          print('\n'.join(out[:60]) if out else 'none')
+          PY
+
       - name: Publish log as commit comment
         if: always()
         run: |
