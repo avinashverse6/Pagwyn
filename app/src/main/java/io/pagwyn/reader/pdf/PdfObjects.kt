@@ -16,12 +16,16 @@ internal sealed class PdfObject {
         operator fun get(key: String): PdfObject? = entries[key]
         val size: Int get() = entries.size
     }
-    class Stream(
-        val dict: Map<String, PdfObject>,
-        val raw: ByteArray,
-        val extras: Map<String, PdfObject>,
-    ) : PdfObject() {
-        operator fun get(key: String): PdfObject? = dict[key] ?: extras[key]
+    /**
+     * A dictionary followed by a binary stream.
+     *
+     * Streams are *not* dictionaries in Kotlin terms, but a stream object must still
+     * be reachable through a /Contents reference. Keeping the dictionary as a field
+     * (rather than a parallel class) is what makes `stream["Type"]` and
+     * `stream is Stream` work together.
+     */
+    class Stream(val dict: Dict, val raw: ByteArray) : PdfObject() {
+        operator fun get(key: String): PdfObject? = dict[key]
     }
     object Null : PdfObject()
 }
@@ -37,19 +41,19 @@ internal sealed class PdfObject {
 internal class PdfObjectReader(private val data: ByteArray) {
 
     /** Reads every top-level object it can find, keyed by object number. */
-    fun readAllObjects(): Map<Int, PdfObject.Dict> {
-        val result = HashMap<Int, PdfObject.Dict>()
+    fun readAllObjects(): Map<Int, PdfObject> {
+        val result = HashMap<Int, PdfObject>()
         val text = data
         var i = 0
         while (i < text.size) {
             val objStart = findObjectStart(i) ?: break
             val (number, bodyStart) = objStart
             val end = findEndObject(bodyStart)
-            val dict = runCatching { parseIndirectObject(bodyStart, end) }.getOrNull()
-            if (dict != null) {
-                if (result[number] == null) result[number] = dict
+            val parsed = runCatching { parseIndirectObject(bodyStart, end) }.getOrNull()
+            if (parsed != null) {
+                if (result[number] == null) result[number] = parsed
                 // Object streams carry more dictionaries: unroll them.
-                unrollObjectStream(dict)?.forEach { (n, d) ->
+                unrollObjectStream(parsed)?.forEach { (n, d) ->
                     if (result[n] == null) result[n] = d
                 }
             }
@@ -92,18 +96,16 @@ internal class PdfObjectReader(private val data: ByteArray) {
     private fun findEndObject(from: Int): Int {
         var i = from
         while (i < data.size - 6) {
-            if (data[i] == 'e'.code.toByte() && data[i + 1] == 'n'.code.toByte() &&
-                data[i + 2] == 'd'.code.toByte() && data[i + 3] == 'o'.code.toByte() &&
-                data[i + 4] == 'b'.code.toByte() && data[i + 5] == 'j'.code.toByte()
-            ) {
-                return i + 6
+            if (matches(i, "endobj")) return i + 6
+            // "endstream" must be checked before "stream", because it *contains*
+            // "stream": matching the inner keyword would skip a whole object.
+            if (matches(i, "endstream")) {
+                i += 9
+                continue
             }
-            if (data[i] == 's'.code.toByte() && data[i + 1] == 't'.code.toByte() &&
-                data[i + 2] == 'r'.code.toByte() && data[i + 3] == 'e'.code.toByte() &&
-                data[i + 4] == 'a'.code.toByte() && data[i + 5] == 'm'.code.toByte()
-            ) {
-                // Skip the binary stream payload entirely: scanning it blindly can
-                // produce false positives and is slow.
+            if (matches(i, "stream")) {
+                // Skip binary stream payloads: they can contain arbitrary bytes that
+                // look like keywords, and scanning them is wasted work.
                 val length = streamLengthAfter(i)
                 if (length != null && length > 0) {
                     val after = i + 6 + skipEol(i + 6) + length
@@ -112,10 +114,20 @@ internal class PdfObjectReader(private val data: ByteArray) {
                         continue
                     }
                 }
+                i += 6
+                continue
             }
             i++
         }
         return i
+    }
+
+    private fun matches(at: Int, keyword: String): Boolean {
+        if (at + keyword.length > data.size) return false
+        for (i in keyword.indices) {
+            if (data[at + i] != keyword[i].code.toByte()) return false
+        }
+        return true
     }
 
     private fun skipEol(at: Int): Int {
@@ -145,7 +157,7 @@ internal class PdfObjectReader(private val data: ByteArray) {
         return null
     }
 
-    private fun parseIndirectObject(start: Int, end: Int): PdfObject.Dict? {
+    private fun parseIndirectObject(start: Int, end: Int): PdfObject? {
         val parser = ValueParser(data, start, end)
         parser.skipWhitespace()
         val value = parser.parseValue()
@@ -154,25 +166,21 @@ internal class PdfObjectReader(private val data: ByteArray) {
                 parser.skipWhitespace()
                 if (parser.consumeKeyword("stream")) {
                     val streamStart = parser.streamDataStart()
-                    val length = (value["Length"] as? PdfObject.Num)?.value?.toInt()
-                        ?: (end - streamStart)
-                    val raw = data.copyOfRange(
-                        streamStart,
-                        (streamStart + length).coerceAtMost(end).coerceAtLeast(streamStart),
-                    )
-                    PdfObject.Stream(value.entries, raw, emptyMap())
+                    val declared = (value["Length"] as? PdfObject.Num)?.value?.toInt()
+                    val length = (declared ?: (end - streamStart)).coerceAtLeast(0)
+                    val rawEnd = (streamStart + length).coerceAtMost(data.size).coerceAtLeast(streamStart)
+                    PdfObject.Stream(value, data.copyOfRange(streamStart, rawEnd))
                 } else {
                     value
                 }
             }
-            is PdfObject.Stream -> value
-            else -> null
-        } as? PdfObject.Dict
+            else -> value
+        }
     }
 
     /** Expands /Type /ObjStm containers into their member dictionaries. */
-    private fun unrollObjectStream(stream: PdfObject.Dict): Map<Int, PdfObject.Dict>? {
-        val s = stream as? PdfObject.Stream ?: return null
+    private fun unrollObjectStream(obj: PdfObject): Map<Int, PdfObject>? {
+        val s = obj as? PdfObject.Stream ?: return null
         val type = (s["Type"] as? PdfObject.Name)?.value
         if (type != "ObjStm") return null
         val decoded = decodeStream(s) ?: return null
@@ -183,7 +191,7 @@ internal class PdfObjectReader(private val data: ByteArray) {
         val numbers = header.trim().split(Regex("\\s+")).mapNotNull { it.toIntOrNull() }
         if (numbers.size < count * 2) return null
 
-        val out = HashMap<Int, PdfObject.Dict>(count)
+        val out = HashMap<Int, PdfObject>(count)
         for (i in 0 until count) {
             val objNumber = numbers.getOrNull(i * 2) ?: continue
             val offset = numbers.getOrNull(i * 2 + 1) ?: continue

@@ -138,8 +138,15 @@ class PdfParser(private val path: String) {
         return ParsedDocument(text)
     }
 
-    private fun collectPages(objects: Map<Int, PdfObject.Dict>): List<PdfObject.Dict> {
+    private fun collectPages(objects: Map<Int, PdfObject>): List<PdfObject.Dict> {
+        fun asDict(obj: PdfObject?): PdfObject.Dict? = when (obj) {
+            is PdfObject.Dict -> obj
+            is PdfObject.Stream -> obj.dict
+            else -> null
+        }
+
         val direct = objects.values
+            .mapNotNull(::asDict)
             .filter { (it["Type"] as? PdfObject.Name)?.value == "Page" }
             .filter { it["Contents"] != null }
 
@@ -151,17 +158,26 @@ class PdfParser(private val path: String) {
         // Fall back to object order for damaged or unusual files.
         return objects.entries
             .sortedBy { it.key }
-            .map { it.value }
+            .mapNotNull { asDict(it.value) }
             .filter { (it["Type"] as? PdfObject.Name)?.value == "Page" }
     }
 
+    private fun dictOf(objects: Map<Int, PdfObject>, value: PdfObject?): PdfObject.Dict? = when (value) {
+        is PdfObject.Dict -> value
+        is PdfObject.Stream -> value.dict
+        is PdfObject.Reference -> dictOf(objects, objects[value.number])
+        else -> null
+    }
+
     private fun orderByTree(
-        objects: Map<Int, PdfObject.Dict>,
+        objects: Map<Int, PdfObject>,
         fallback: List<PdfObject.Dict>,
     ): List<PdfObject.Dict> {
-        val pagesRoot = objects.values.firstOrNull {
-            (it["Type"] as? PdfObject.Name)?.value == "Pages" && it["Parent"] == null
-        } ?: return fallback
+        val pagesRoot = objects.values
+            .mapNotNull { dictOf(objects, it) }
+            .firstOrNull {
+                (it["Type"] as? PdfObject.Name)?.value == "Pages" && it["Parent"] == null
+            } ?: return fallback
 
         val ordered = ArrayList<PdfObject.Dict>(fallback.size)
         val visited = HashSet<PdfObject.Dict>()
@@ -175,12 +191,7 @@ class PdfParser(private val path: String) {
             }
             val kids = node["Kids"] as? PdfObject.Array ?: return
             for (kid in kids.items) {
-                val dict = when (kid) {
-                    is PdfObject.Dict -> kid
-                    is PdfObject.Reference -> objects[kid.number]
-                    else -> null
-                }
-                walk(dict)
+                walk(dictOf(objects, kid))
             }
         }
 
@@ -191,34 +202,35 @@ class PdfParser(private val path: String) {
         return ordered
     }
 
-    private fun extractPageText(page: PdfObject.Dict, objects: Map<Int, PdfObject.Dict>): String {
+    private fun extractPageText(page: PdfObject.Dict, objects: Map<Int, PdfObject>): String {
         val contents = resolveContents(page["Contents"], objects) ?: return ""
         val stream = reader.decodeStream(contents) ?: return ""
         val fonts = readPageFonts(page, objects)
         return ContentStreamDecoder(stream, fonts).decode()
     }
 
+    private fun streamOf(objects: Map<Int, PdfObject>, value: PdfObject?): PdfObject.Stream? = when (value) {
+        is PdfObject.Stream -> value
+        is PdfObject.Reference -> streamOf(objects, objects[value.number])
+        else -> null
+    }
+
     private fun resolveContents(
         value: PdfObject?,
-        objects: Map<Int, PdfObject.Dict>,
+        objects: Map<Int, PdfObject>,
     ): PdfObject.Stream? = when (value) {
         is PdfObject.Stream -> value
-        is PdfObject.Reference -> objects[value.number] as? PdfObject.Stream
+        is PdfObject.Reference -> streamOf(objects, objects[value.number])
         is PdfObject.Array -> {
-            // Multiple content streams are concatenated with newlines.
-            val merged = value.items.mapNotNull {
-                when (it) {
-                    is PdfObject.Stream -> it
-                    is PdfObject.Reference -> objects[it.number] as? PdfObject.Stream
-                    else -> null
-                }
-            }
-            if (merged.isEmpty()) {
+            // A page may reference several content streams; they form one stream
+            // conceptually, so the decoded bytes are concatenated.
+            val parts = value.items.mapNotNull { streamOf(objects, it) }
+                .mapNotNull { reader.decodeStream(it) }
+            if (parts.isEmpty()) {
                 null
             } else {
-                val joined = merged.mapNotNull { reader.decodeStream(it) }
-                    .fold(ByteArray(0)) { acc, part -> acc + part + '\n'.code.toByte() }
-                PdfObject.Stream(emptyMap(), joined, emptyMap())
+                val joined = parts.fold(ByteArray(0)) { acc, part -> acc + part + '\n'.code.toByte() }
+                PdfObject.Stream(PdfObject.Dict(LinkedHashMap()), joined)
             }
         }
         else -> null
@@ -226,27 +238,14 @@ class PdfParser(private val path: String) {
 
     private fun readPageFonts(
         page: PdfObject.Dict,
-        objects: Map<Int, PdfObject.Dict>,
+        objects: Map<Int, PdfObject>,
     ): Map<String, PdfFontEncoding> {
-        val resources = when (val res = page["Resources"]) {
-            is PdfObject.Dict -> res
-            is PdfObject.Reference -> objects[res.number]
-            else -> null
-        } ?: return emptyMap()
-
-        val fontDict = when (val fonts = resources["Font"]) {
-            is PdfObject.Dict -> fonts
-            is PdfObject.Reference -> objects[fonts.number]
-            else -> null
-        } ?: return emptyMap()
+        val resources = dictOf(objects, page["Resources"]) ?: return emptyMap()
+        val fontDict = dictOf(objects, resources["Font"]) ?: return emptyMap()
 
         val result = HashMap<String, PdfFontEncoding>(fontDict.size)
         for ((name, value) in fontDict.entries) {
-            val font = when (value) {
-                is PdfObject.Dict -> value
-                is PdfObject.Reference -> objects[value.number]
-                else -> null
-            } ?: continue
+            val font = dictOf(objects, value) ?: continue
             val subtype = (font["Subtype"] as? PdfObject.Name)?.value
             val encoding = (font["Encoding"] as? PdfObject.Name)?.value
             val toUnicode = font["ToUnicode"] != null
@@ -299,11 +298,31 @@ internal class ContentStreamDecoder(
                 }
                 b == '<'.code -> i = readHex(i + 1)
                 b == '/'.code -> i = readName(i + 1)
+                b == '-'.code || b == '.'.code || b in '0'.code..'9'.code -> {
+                    i = readNumber(i)
+                }
                 isTokenStart(b) -> i = readToken(i)
                 else -> i++
             }
         }
         return out.toString().trim()
+    }
+
+    /** Reads a numeric operand and uses it as a kerning hint. */
+    private fun readNumber(start: Int): Int {
+        var i = start
+        val sb = StringBuilder(8)
+        while (i < stream.size) {
+            val b = stream[i].toInt() and 0xFF
+            if (b in '0'.code..'9'.code || b == '-'.code || b == '.'.code || b == '+'.code) {
+                sb.append(b.toChar())
+                i++
+            } else {
+                break
+            }
+        }
+        sb.toString().toDoubleOrNull()?.let(::noteKerning)
+        return if (i == start) start + 1 else i
     }
 
     private fun isTokenStart(b: Int): Boolean =
@@ -351,10 +370,10 @@ internal class ContentStreamDecoder(
                     depth--
                     if (depth == 0) {
                         i++
+                        // Text strings appear only as text-showing operands, so the
+                        // bytes can be emitted immediately; array kerning adjustments
+                        // are handled separately.
                         appendBytes(buffer)
-                        // A closing paren may be followed by Tj/TJ which we handle
-                        // in readToken, but literal text is most often pushed directly.
-                        out.append('\u0000')
                         return i
                     }
                     buffer.add(b.toByte())
@@ -433,24 +452,31 @@ internal class ContentStreamDecoder(
             i++
         }
         when (token.toString()) {
-            // Td, TD, T*, TL: vertical movement becomes a newline.
-            "Td", "TD", "T*" -> newline()
-            // TJ arrays insert kerning gaps; a large negative adjustment is a space.
-            "TJ", "Tj", "'", "\"" -> trimPendingSpace()
+            // Vertical movement becomes a line break in the extracted text.
+            "Td", "TD", "T*", "ET" -> newline()
+            // Text-showing operators simply end the current run; word breaks inside
+            // TJ arrays are detected from the kerning numbers instead.
+            "TJ", "Tj", "'", "\"" -> Unit
         }
         return if (i == start) start + 1 else i
     }
 
-    private fun trimPendingSpace() {
-        if (out.isNotEmpty() && out.last() == ' ') out.setLength(out.length - 1)
-        lastWasSpace = false
+    /**
+     * A large negative number inside a TJ array is how PDF producers encode a word
+     * space (instead of a real space glyph). Values are in thousandths of an em, so
+     * anything below about -180 is treated as a break.
+     */
+    private fun noteKerning(number: Double) {
+        if (number > -180.0) return
+        if (out.isEmpty() || out.last() == ' ' || out.last() == '\n') return
+        out.append(' ')
+        lastWasSpace = true
     }
 
     private fun newline() {
         if (out.isEmpty()) return
-        if (out.last() != '\n') {
-            out.append('\n')
-        }
+        if (out.last() == ' ') out.setLength(out.length - 1)
+        if (out.isNotEmpty() && out.last() != '\n') out.append('\n')
         lastWasSpace = true
     }
 

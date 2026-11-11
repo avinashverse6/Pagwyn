@@ -188,7 +188,11 @@ class PageImageView @JvmOverloads constructor(
         fun aspectFor(widthPoints: Int, heightPoints: Int): Float =
             if (widthPoints > 0 && heightPoints > 0) widthPoints.toFloat() / heightPoints else A4_ASPECT
 
-        fun scaledHeight(width: Int, ratio: Float): Int = (width / ratio).toInt().coerceAtLeast(1)
+        /** Height for a given width, guarding against a degenerate aspect ratio. */
+        fun scaledHeight(width: Int, ratio: Float): Int {
+            val safeRatio = if (ratio > 0.01f) ratio else A4_ASPECT
+            return (width / safeRatio).toInt().coerceAtLeast(1)
+        }
 
         fun minOf(a: Int, b: Int, c: Int): Int = min(a, min(b, c))
     }

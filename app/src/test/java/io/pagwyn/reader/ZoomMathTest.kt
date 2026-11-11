@@ -3,6 +3,7 @@ package io.pagwyn.reader
 import io.pagwyn.reader.pdf.PageInfo
 import io.pagwyn.reader.ui.widget.PageImageView
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -41,7 +42,8 @@ class ZoomMathTest {
     fun `scaled height preserves the aspect ratio`() {
         // A4 at 1000px wide is 1414px tall.
         assertEquals(1414, PageImageView.scaledHeight(1000, 0.707f))
-        // Never returns zero, even for degenerate input.
-        assertEquals(1, PageImageView.scaledHeight(1, 0.0001f).coerceAtLeast(1))
+        // Degenerate ratios still yield a positive height, never zero or negative.
+        assertTrue(PageImageView.scaledHeight(1, 0.0001f) >= 1)
+        assertTrue(PageImageView.scaledHeight(100, 0f) >= 1)
     }
 }
