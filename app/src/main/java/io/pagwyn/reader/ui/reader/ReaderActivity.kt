@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.getSystemService
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,7 +35,6 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.pagwyn.reader.PagwynApplication
 import io.pagwyn.reader.R
@@ -82,10 +82,8 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private lateinit var settings: Settings
 
     private lateinit var continuousAdapter: ContinuousReaderAdapter
-    private var layoutManager: LinearLayoutManager? = null
+    private var layoutManager: SnappingLayoutManager? = null
 
-    private var singleSlot: PageSlotView? = null
-    private var renderJob: Job? = null
     private var autoHideJob: Job? = null
     private var badgeJob: Job? = null
 
@@ -94,6 +92,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private var restorePage = 0
     private var pendingRestore = false
     private var lastRenderWidth = 0
+    private var systemBars: Insets = Insets.NONE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -155,13 +154,38 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         val bottomBase = binding.bottomBar.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(binding.readerRoot) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            systemBars = bars
             binding.topBar.updatePadding(top = bars.top)
             binding.bottomBar.updatePadding(bottom = bottomBase + bars.bottom)
             binding.loadingPanel.updatePadding(bottom = bars.bottom)
-            binding.pageList.updatePadding(top = bars.top, bottom = bottomBase + bars.bottom)
+            binding.errorPanel.updatePadding(bottom = bars.bottom)
+            binding.jumpBackChip.setPadding(
+                binding.jumpBackChip.paddingLeft,
+                binding.jumpBackChip.paddingTop,
+                binding.jumpBackChip.paddingRight,
+                binding.jumpBackChip.paddingBottom,
+            )
+            binding.jumpBackChip.translationY = -(bars.bottom + dp(12)).toFloat()
+            applyContentInsets()
             insets
         }
         ViewCompat.requestApplyInsets(binding.readerRoot)
+    }
+
+    /**
+     * The toolbars float above the page list, so the list is given matching content
+     * padding. This guarantees the first and last page are never hidden behind the
+     * chrome, while the document still uses the full window.
+     */
+    private fun applyContentInsets() {
+        val topChrome = if (binding.topBar.isVisible) resources.getDimensionPixelSize(R.dimen.toolbar_height) + systemBars.top else systemBars.top
+        val bottomChrome = if (binding.bottomBar.isVisible) {
+            (binding.bottomBar.height.takeIf { it > 0 } ?: dp(112)) + systemBars.bottom
+        } else {
+            systemBars.bottom
+        }
+        binding.pageList.setPadding(0, topChrome, 0, bottomChrome)
+        binding.pageList.clipToPadding = false
     }
 
     private fun setupList() {
@@ -169,7 +193,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         continuousAdapter.bitmapLookup = { page ->
             viewModel.cachedBitmapAny(page)
         }
-        layoutManager = LinearLayoutManager(this)
+        layoutManager = SnappingLayoutManager(this)
         binding.pageList.layoutManager = layoutManager
         binding.pageList.adapter = continuousAdapter
         binding.pageList.itemAnimator = null
@@ -256,7 +280,14 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
         if (state.error == null && !state.loading) {
             binding.pageList.isVisible = state.mode == ReadingMode.CONTINUOUS
-            binding.singlePageContainer.isVisible = state.mode == ReadingMode.SINGLE_PAGE
+            binding.singlePageContainer.isVisible = false
+        }
+
+        // Feed the list once the document is open. Without this the reader would
+        // show an empty surface for a loaded document.
+        if (state.pageCount > 0 && continuousAdapter.pageCount != state.pageCount) {
+            continuousAdapter.submit(state.pageCount) { page -> viewModel.pageInfo(page) }
+            binding.pageList.post { updateVisibleWindow() }
         }
 
         binding.documentTitle.text = state.documentTitle
@@ -289,6 +320,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         }
 
         updateChromeVisibility(state)
+        binding.pageList.post { applyContentInsets() }
         syncMode(state.mode)
     }
 
@@ -355,59 +387,20 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     // ------------------------------------------------------------------ mode handling
 
+    /**
+     * Both reading modes share one RecyclerView. Single-page mode simply turns on
+     * page snapping, which keeps zoom state, cache and scrolling in a single place.
+     */
     private fun syncMode(mode: ReadingMode) {
-        val currentlySingle = singleSlot != null
-        if (mode == ReadingMode.SINGLE_PAGE && !currentlySingle) {
-            setupSinglePage()
-        } else if (mode == ReadingMode.CONTINUOUS && currentlySingle) {
-            teardownSinglePage()
-        }
-        if (mode == ReadingMode.SINGLE_PAGE) {
-            binding.pageList.isVisible = false
-            binding.singlePageContainer.isVisible = true
-        }
+        layoutManager?.snapToPages = mode == ReadingMode.SINGLE_PAGE
+        binding.pageList.isVisible = hasPages()
+        binding.singlePageContainer.isVisible = false
+        applyContentInsets()
     }
 
-    private fun setupSinglePage() {
+    private fun hasPages(): Boolean {
         val state = viewModel.state.value
-        if (state.pageCount <= 0) return
-        val slot = PageSlotView(this).apply {
-            host = this@ReaderActivity
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-        binding.singlePageContainer.addView(slot)
-        singleSlot = slot
-        bindSinglePage(state.currentPage)
-    }
-
-    private fun teardownSinglePage() {
-        singleSlot?.let { binding.singlePageContainer.removeView(it) }
-        singleSlot = null
-    }
-
-    private fun bindSinglePage(page: Int) {
-        val slot = singleSlot ?: return
-        val info = viewModel.pageInfo(page)
-        slot.bind(page, info?.aspectRatio ?: 0.707f, viewModel.state.value.rotation)
-        slot.setPageGap(0)
-        val cached = viewModel.cachedBitmapAny(page)
-        if (cached != null) slot.setBitmap(cached, sharp = false)
-        requestSinglePageRender(page)
-    }
-
-    private fun requestSinglePageRender(page: Int) {
-        renderJob?.cancel()
-        renderJob = lifecycleScope.launch {
-            val slot = singleSlot ?: return@launch
-            val info = withContext(Dispatchers.IO) { viewModel.pageInfoAsync(page) }
-            if (info == null) return@launch
-            slot.bind(page, info.aspectRatio, viewModel.state.value.rotation)
-            val width = slot.renderedWidthPx().takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
-            viewModel.requestRender(listOf(page), width)
-        }
+        return state.pageCount > 0 && state.error == null
     }
 
     // ------------------------------------------------------------------ viewport
@@ -416,8 +409,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private fun updateVisibleWindow() {
         val state = viewModel.state.value
         if (state.pageCount <= 0) return
-        if (state.mode == ReadingMode.SINGLE_PAGE) return
-
         val manager = layoutManager ?: return
         val first = manager.findFirstVisibleItemPosition()
         val last = manager.findLastVisibleItemPosition()
@@ -487,16 +478,22 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         }
     }
 
+    /**
+     * Render resolution for the visible page.
+     *
+     * The live slot knows the page's drawn width including pinch zoom, which is what
+     * keeps zoomed text sharp instead of upscaled.
+     */
     private fun currentRenderWidthPx(): Int {
+        val manager = layoutManager
         val state = viewModel.state.value
-        if (state.mode == ReadingMode.SINGLE_PAGE) {
-            val slot = singleSlot ?: return resources.displayMetrics.widthPixels
-            val width = slot.renderedWidthPx()
+        if (manager != null) {
+            val view = manager.findViewByPosition(state.currentPage) as? PageSlotView
+            val width = view?.renderedWidthPx() ?: 0
             if (width > 0) return width
         }
-        // Continuous: the page is as wide as the list minus page margins.
         val listWidth = binding.pageList.width - binding.pageList.paddingStart - binding.pageList.paddingEnd
-        if (listWidth > 0) return (listWidth * 1f).toInt()
+        if (listWidth > 0) return listWidth
         return resources.displayMetrics.widthPixels
     }
 
@@ -504,11 +501,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     private fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean) {
         if (isFinishing || isDestroyed) return
-        val state = viewModel.state.value
-        if (state.mode == ReadingMode.SINGLE_PAGE) {
-            if (page == state.currentPage) singleSlot?.setBitmap(bitmap, sharp)
-            return
-        }
         if (binding.pageList.isComputingLayout) return
         val manager = layoutManager ?: return
         val index = if (continuousAdapter.pageCount > page) page else -1
@@ -574,12 +566,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         val state = viewModel.state.value
         if (state.pageCount <= 0) return
         val target = page.coerceIn(0, state.pageCount - 1)
-        if (state.mode == ReadingMode.SINGLE_PAGE) {
-            viewModel.onPageVisible(target)
-            bindSinglePage(target)
-            if (select) showPageBadge(target)
-            return
-        }
         if (smooth) {
             binding.pageList.smoothScrollToPosition(target)
         } else {
@@ -679,11 +665,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     private fun zoomStep(increasing: Boolean) {
         val state = viewModel.state.value
-        if (state.mode == ReadingMode.SINGLE_PAGE) {
-            val slot = singleSlot ?: return
-            if (increasing) slot.zoomIn() else slot.zoomOut()
-            return
-        }
         val manager = layoutManager ?: return
         val position = state.currentPage
         val view = manager.findViewByPosition(position) as? PageSlotView
@@ -727,10 +708,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     private fun applyZoomToCurrent(scale: Float) {
         val state = viewModel.state.value
-        if (state.mode == ReadingMode.SINGLE_PAGE) {
-            singleSlot?.setZoom(scale)
-            return
-        }
         val manager = layoutManager ?: return
         val view = manager.findViewByPosition(state.currentPage) as? PageSlotView
         view?.setZoom(scale)
@@ -991,7 +968,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     override fun onDestroy() {
         autoHideJob?.cancel()
         badgeJob?.cancel()
-        renderJob?.cancel()
         continuousAdapter.clearBound()
         super.onDestroy()
     }
