@@ -1,4 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:background="?attr/pwSurface"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/metadataToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_1"
+        android:paddingEnd="@dimen/space_1">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/cd_navigate_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            style="@style/Text.Pagwyn.Label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="@dimen/space_1"
+            android:text="@string/metadata_title"
+            android:textSize="17sp" />
+
+        <ImageButton
+            android:id="@+id/btnCopy"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/metadata_copy_path"
+            android:src="@drawable/ic_copy" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/screen_margin"
+            android:paddingEnd="@dimen/screen_margin"
+            android:paddingBottom="@dimen/space_8">
+
+            <TextView
+                android:id="@+id/metadataTitleText"
+                style="@style/Text.Pagwyn.Display"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_2"
+                android:textSize="26sp"
+                tools:text="Deep Work" />
+
+            <TextView
+                android:id="@+id/metadataSubtitle"
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_1"
+                android:layout_marginBottom="@dimen/space_5"
+                tools:text="300 pages · 4.2 MB" />
+
+            <LinearLayout
+                android:id="@+id/metadataRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <Button
+                android:id="@+id/btnOpenDocument"
+                style="@style/Widget.Pagwyn.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="@dimen/space_5"
+                android:text="@string/action_open" />
+
+            <Button
+                android:id="@+id/btnShareDocument"
+                style="@style/Widget.Pagwyn.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="@dimen/space_2"
+                android:text="@string.action_share" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

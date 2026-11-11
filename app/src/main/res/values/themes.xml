@@ -131,7 +131,7 @@
     </style>
 
     <!-- Bottom sheet chrome: rounded top corners, transparent window frame. -->
-    <style name="Pagwyn.SheetDialog" parent="Theme.AppCompat.DayNight.Dialog">
+    <style name="Pagwyn_SheetDialog" parent="Theme.AppCompat.DayNight.Dialog">
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>
@@ -140,7 +140,7 @@
         <item name="colorAccent">?attr/pwPrimary</item>
     </style>
 
-    <style name="Pagwyn.SheetAnimation">
+    <style name="Pagwyn_SheetAnimation">
         <item name="android:windowEnterAnimation">@anim/pw_sheet_in</item>
         <item name="android:windowExitAnimation">@anim/pw_sheet_out</item>
     </style>

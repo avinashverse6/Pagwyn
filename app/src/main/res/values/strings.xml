@@ -168,6 +168,7 @@
     <string name="cd_thumbnail">Page thumbnail</string>
     <string name="error_no_app">No app can open this file</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_open_pdf_only">That file is not a PDF.</string>
 
     <!-- No-Storage-Access-required file picker -->
     <string name="picker_title">Choose a PDF</string>
