@@ -1,7 +1,16 @@
 name: Android CI
 
 on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Create a GitHub Release with the built APKs"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -63,12 +72,124 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Verify APK (architecture, SDK, permissions, signature)
+        id: verify
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          AAPT2=$(find "$SDK/build-tools" -name aapt2 | sort | tail -1)
+          APKSIGNER=$(find "$SDK/build-tools" -name apksigner | sort | tail -1)
+          DEBUG_APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          RELEASE_APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+
+          {
+            echo "### Pagwyn build verification"
+            echo
+            echo "| Artifact | Size | SHA-256 |"
+            echo "|---|---|---|"
+            echo "| debug | $(stat -c%s "$DEBUG_APK") bytes | \`$(sha256sum "$DEBUG_APK" | cut -d' ' -f1)\` |"
+            echo "| release | $(stat -c%s "$RELEASE_APK") bytes | \`$(sha256sum "$RELEASE_APK" | cut -d' ' -f1)\` |"
+            echo
+            echo "**Native libraries in the release APK** (empty means pure Kotlin/Java, so all ABIs are supported)"
+            echo '```'
+            unzip -l "$RELEASE_APK" | grep -E ' lib/' || echo "(none)"
+            echo '```'
+            echo
+            echo "**Package / SDK levels / launcher**"
+            echo '```'
+            "$AAPT2" dump badging "$RELEASE_APK" 2>/dev/null | grep -E "package:|sdkVersion|targetSdkVersion|launchable-activity|native-code" || true
+            echo '```'
+            echo
+            echo "**Declared permissions**"
+            echo '```'
+            "$AAPT2" dump permissions "$RELEASE_APK" 2>/dev/null || true
+            echo '```'
+            echo
+            echo "**Signature**"
+            echo '```'
+            "$APKSIGNER" verify --print-certs "$RELEASE_APK" 2>/dev/null | head -4 || true
+            echo '```'
+            echo
+            echo "**Unit test results**"
+            echo '```'
+            python3 - <<'PYTEST'
+          import glob, xml.etree.ElementTree as ET
+          total = failures = skipped = 0
+          for path in glob.glob('app/build/test-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  total += 1
+                  for child in case:
+                      if child.tag in ('failure', 'error'):
+                          failures += 1
+                      elif child.tag == 'skipped':
+                          skipped += 1
+          print(f"{total} tests, {failures} failures, {skipped} skipped")
+          PYTEST
+            echo '```'
+          } | tee /tmp/report.md
+
+          mkdir -p artifacts
+          cp "$RELEASE_APK" artifacts/pagwyn-release.apk
+          cp "$DEBUG_APK" artifacts/pagwyn-debug.apk
+
+      - name: Post verification report
+        if: always() && steps.verify.outcome == 'success'
+        run: |
+          python3 - <<'PYREPORT'
+          import json, os, urllib.request
+          body = json.dumps({"body": open('/tmp/report.md').read()})
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=body.encode(),
+              headers={
+                  "Authorization": f"token {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PYREPORT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
           name: pagwyn-apks
           path: |
+            artifacts/*.apk
             app/build/outputs/apk/**/*.apk
             app/build/outputs/mapping/**/*
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish_release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Pagwyn build {0}', github.run_number) }}
+          files: |
+            artifacts/pagwyn-release.apk
+            artifacts/pagwyn-debug.apk
+          body: |
+            ## Pagwyn — Read Without Distraction
+
+            Lightweight, offline-first PDF reader for Android 7.0+.
+
+            * `pagwyn-release.apk` — minified, resource-shrunk build for everyday use.
+            * `pagwyn-debug.apk` — unminified build including LeakCanary, for testing.
+
+            Both are universal APKs: they install on 32-bit ARMv7 and 64-bit ARM devices,
+            as well as x86/x86_64 emulators. Pagwyn contains no native libraries, so
+            ARMv7 support is guaranteed by construction.
+
+            The release APK is signed with the project development key, which is
+            intentional for sideloading. See `docs/BUILDING.md` to sign your own build.
