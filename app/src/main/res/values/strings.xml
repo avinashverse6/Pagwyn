@@ -153,6 +153,7 @@
     <string name="action_done">Done</string>
     <string name="action_ok">OK</string>
     <string name="action_retry">Retry</string>
+    <string name="action_open_other_app">Open in another app</string>
     <string name="action_star">Star</string>
     <string name="action_unstar">Remove star</string>
     <string name="action_share">Share</string>

@@ -99,7 +99,7 @@ class PdfTextService(private val descriptor: ParcelFileDescriptor) : AutoCloseab
 }
 
 /** Result of parsing a PDF's text layer. */
-internal class ParsedDocument(private val pages: List<String>) {
+class ParsedDocument(private val pages: List<String>) {
     val pageCount: Int get() = pages.size
 
     val hasAnyText: Boolean get() = pages.any { it.isNotBlank() }
@@ -116,7 +116,7 @@ internal class ParsedDocument(private val pages: List<String>) {
  *  - Decodes text-showing operators (Tj, TJ, ', ") with simple font encodings.
  *  - Gives up quickly and safely on anything it does not understand.
  */
-internal class PdfParser(private val path: String) {
+class PdfParser(private val path: String) {
 
     private val bytes: ByteArray = java.io.File(path).readBytes()
 

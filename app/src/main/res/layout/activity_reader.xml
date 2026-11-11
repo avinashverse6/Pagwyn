@@ -99,12 +99,12 @@
                 android:text="@string/action_close" />
 
             <Button
-                android:id="@+id/errorRetry"
+                android:id="@+id/errorOtherApp"
                 style="@style/Widget.Pagwyn.Button.Primary"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
                 android:layout_marginStart="@dimen/space_2"
-                android:text="@string/action_retry"
+                android:text="@string/action_open_other_app"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
@@ -332,7 +332,7 @@
 
     <!-- Transient page badge shown while turning pages in single-page mode. -->
     <TextView
-        android:id="@+id/transientPageBadge"
+        android:id="@+id/pageBadge"
         style="@style/Text.Pagwyn.Caption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -344,6 +344,23 @@
         android:paddingEnd="@dimen/space_4"
         android:paddingBottom="@dimen/space_1"
         android:textColor="?attr/pwOnSurface"
+        android:visibility="gone" />
+
+    <!-- "Back to where you were" chip, shown after jumping away from the resume point. -->
+    <TextView
+        android:id="@+id/jumpBackChip"
+        style="@style/Text.Pagwyn.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="@dimen/space_4"
+        android:background="@drawable/bg_chip"
+        android:elevation="2dp"
+        android:paddingStart="@dimen/space_4"
+        android:paddingTop="@dimen/space_2"
+        android:paddingEnd="@dimen/space_4"
+        android:paddingBottom="@dimen/space_2"
+        android:textColor="?attr/pwPrimary"
         android:visibility="gone" />
 
 </FrameLayout>

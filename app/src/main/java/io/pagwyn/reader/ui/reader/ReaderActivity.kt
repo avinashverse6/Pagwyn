@@ -11,11 +11,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -218,8 +218,8 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.btnNextPage.setOnClickListener { stepPage(1) }
         binding.pageIndicator.setOnClickListener { openGoToPage() }
         binding.errorClose.setOnClickListener { finish() }
-        binding.errorRetry.setOnClickListener { currentUri?.let { viewModel.open(it, pendingPassword) } }
-        binding.transientPageBadge.setOnClickListener { jumpToResume() }
+        binding.errorOtherApp.setOnClickListener { openInOtherApp() }
+        binding.jumpBackChip.setOnClickListener { jumpToResume() }
     }
 
     private fun observeState() {
@@ -238,11 +238,18 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.topBar.isVisible = !state.fullscreen || state.controlsVisible
         binding.bottomBar.isVisible = !state.fullscreen || state.controlsVisible
 
+        if (state.error == ReaderError.Password && !isFinishing) {
+            promptForPassword()
+        }
+
         state.error?.let { error ->
             binding.loadingPanel.isVisible = false
             binding.errorTitle.setText(error.titleRes)
             binding.errorBody.setText(error.bodyRes)
-            binding.errorRetry.isVisible = error.retryable
+            // Pagwyn never fakes a retry: a password-free document that fails to
+            // parse will not succeed on a second identical attempt. Instead the
+            // user is offered a route that actually can help.
+            binding.errorOtherApp.isVisible = error.retryable
             binding.pageList.isVisible = false
             binding.singlePageContainer.isVisible = false
         }
@@ -276,9 +283,9 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         }
 
         applyReaderTheme(state.theme)
-        binding.transientPageBadge.isVisible = state.canJumpBack && state.controlsVisible
+        binding.jumpBackChip.isVisible = state.canJumpBack && !state.loading && state.error == null
         if (state.canJumpBack) {
-            binding.transientPageBadge.text = getString(R.string.reader_jump_back, state.jumpBackPage + 1)
+            binding.jumpBackChip.text = getString(R.string.reader_jump_back, state.jumpBackPage + 1)
         }
 
         updateChromeVisibility(state)
@@ -313,10 +320,24 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDark
         controller.isAppearanceLightNavigationBars = !isDark
-        binding.topBar.setBackgroundColor(
-            if (resolved == ReaderTheme.SEPIA) 0xFFE7DBC2.toInt()
-            else if (isDark) colorFromAttr(R.attr.pwToolbarBackground) else colorFromAttr(R.attr.pwToolbarBackground),
-        )
+        // Toolbars follow the reading theme so the chrome never clashes with the page.
+        val toolbarColor = when (resolved) {
+            ReaderTheme.SEPIA -> 0xFFE7DBC2.toInt()
+            ReaderTheme.DARK -> 0xFF1B1F2B.toInt()
+            else -> 0xFFFDFBF7.toInt()
+        }
+        val onToolbar = when (resolved) {
+            ReaderTheme.DARK -> 0xFFF1EDE5.toInt()
+            else -> 0xFF1C2030.toInt()
+        }
+        binding.topBar.setBackgroundColor(toolbarColor)
+        binding.bottomBar.setBackgroundColor(toolbarColor)
+        tintChrome(binding.topBar, onToolbar)
+        tintChrome(binding.bottomBar, onToolbar)
+        binding.pageIndicator.setTextColor(onToolbar)
+        binding.zoomLabel.setTextColor(onToolbar)
+        binding.documentTitle.setTextColor(onToolbar)
+        binding.documentSubtitle.setTextColor(if (isDark) 0xFFA8ADBD.toInt() else 0xFF5B6274.toInt())
     }
 
     private fun applyBrightnessOverlay(percent: Int) {
@@ -572,14 +593,85 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         jumpToPage(viewModel.state.value.jumpBackPage + 1)
     }
 
+    /** Shows the page number briefly while the chrome is hidden. */
     private fun showPageBadge(page: Int) {
         if (viewModel.state.value.controlsVisible) return
-        binding.transientPageBadge.text = "${page + 1} / ${viewModel.state.value.pageCount}"
-        binding.transientPageBadge.isVisible = true
+        val badge = binding.pageBadge
+        badge.text = "${page + 1} / ${viewModel.state.value.pageCount}"
+        badge.isVisible = true
+        badge.alpha = 0f
+        badge.animate().alpha(1f).setDuration(120).start()
         badgeJob?.cancel()
         badgeJob = lifecycleScope.launch {
-            delay(900)
-            binding.transientPageBadge.isVisible = false
+            delay(850)
+            badge.animate().alpha(0f).setDuration(150).withEndAction { badge.isVisible = false }.start()
+        }
+    }
+
+    /**
+     * Asks for the document password.
+     *
+     * Android's renderer can open encrypted PDFs only through the platform's own
+     * password prompt, which is not exposed to apps. Pagwyn therefore asks the user
+     * and reports honestly when the platform refuses the document — it never
+     * pretends a password-protected file opened successfully.
+     */
+    private fun promptForPassword() {
+        if (isFinishing || isDestroyed) return
+        if (supportFragmentManager.findFragmentByTag(TAG_PASSWORD) != null) return
+        val uri = currentUri ?: return
+        val input = android.widget.EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = getString(R.string.password_hint)
+            setPadding(dp(20), dp(14), dp(20), dp(14))
+        }
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(dp(8), dp(4), dp(8), 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.password_title)
+            .setMessage(R.string.password_message)
+            .setView(container)
+            .setNegativeButton(R.string.action_cancel) { _, _ -> finish() }
+            .setPositiveButton(R.string.password_open) { _, _ ->
+                val password = input.text?.toString().orEmpty()
+                pendingPassword = password
+                viewModel.open(uri, password = password, resume = true)
+            }
+            .show()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    /** Hands the document to another installed PDF app when Pagwyn cannot open it. */
+    private fun openInOtherApp() {
+        val uri = currentUri ?: return
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(intent, getString(R.string.action_open_other_app))
+        runCatching { startActivity(chooser) }
+            .onFailure { toast(getString(R.string.error_no_app)) }
+    }
+
+    /** Applies a tint to every icon inside a toolbar container. */
+    private fun tintChrome(container: ViewGroup, color: Int) {
+        for (i in 0 until container.childCount) {
+            val child = container.getChildAt(i)
+            when (child) {
+                is ImageButton -> child.setColorFilter(color)
+                is ImageView -> if (child.id == R.id.btnBookmark) {
+                    // Bookmark keeps its accent colour when active.
+                    if (!viewModel.state.value.isBookmarked) child.setColorFilter(color)
+                } else {
+                    child.setColorFilter(color)
+                }
+                is ViewGroup -> tintChrome(child, color)
+                is TextView -> child.setTextColor(color)
+            }
         }
     }
 
@@ -958,6 +1050,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     companion object {
         private const val EXTRA_START_PAGE = "io.pagwyn.reader.extra.START_PAGE"
         private const val STATE_URI = "state_uri"
+        private const val TAG_PASSWORD = "password"
 
         /** Pages kept in memory around the current page. */
         private const val CACHE_WINDOW = 3
