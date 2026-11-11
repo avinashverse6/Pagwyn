@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher shortcuts. Both map to real, implemented actions:
+  "Open PDF" starts the system document picker through the home screen, and
+  "Continue reading" reopens the most recent document.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_folder_open"
+        android:shortcutId="open_pdf"
+        android:shortcutLongLabel="@string/shortcut_open_long"
+        android:shortcutShortLabel="@string/shortcut_open_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.pagwyn.reader.ui.home.HomeActivity"
+            android:targetPackage="io.pagwyn.reader" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_history"
+        android:shortcutId="continue_reading"
+        android:shortcutLongLabel="@string/shortcut_continue_long"
+        android:shortcutShortLabel="@string/shortcut_continue_short">
+        <intent
+            android:action="io.pagwyn.reader.action.CONTINUE_READING"
+            android:targetClass="io.pagwyn.reader.ui.home.HomeActivity"
+            android:targetPackage="io.pagwyn.reader" />
+    </shortcut>
+</shortcuts>

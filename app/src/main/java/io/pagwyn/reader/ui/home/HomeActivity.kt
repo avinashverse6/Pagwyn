@@ -64,6 +64,9 @@ class HomeActivity : AppCompatActivity() {
         setupSearch()
         setupActions()
         observe()
+        if (savedInstanceState == null && intent?.action == ACTION_CONTINUE_READING) {
+            binding.root.post { continueReading() }
+        }
         binding.versionLabel.text = getString(R.string.app_name) + " " + BuildConfig.VERSION_NAME
     }
 
@@ -281,12 +284,24 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == Intent.ACTION_VIEW) {
-            intent.data?.let { openUri(it) }
+        when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data?.let { openUri(it) }
+            ACTION_CONTINUE_READING -> continueReading()
+        }
+    }
+
+    /** Launcher shortcut: reopen the most recently read document. */
+    private fun continueReading() {
+        val last = viewModel.state.value.lastRead
+        if (last != null) {
+            openPdf(last)
+        } else {
+            pickDocument()
         }
     }
 
     private companion object {
+        const val ACTION_CONTINUE_READING = "io.pagwyn.reader.action.CONTINUE_READING"
         const val MENU_OPEN = 1
         const val MENU_INFO = 2
         const val MENU_STAR = 3
