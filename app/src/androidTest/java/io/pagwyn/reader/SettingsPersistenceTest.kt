@@ -97,16 +97,20 @@ class SettingsPersistenceTest {
 
     @Test
     fun invalidStoredValuesFallBackToDefaults() {
-        // Values written by a future or older version must not crash the app.
+        // Values written by a newer version must never crash an older build.
         context.getSharedPreferences("pagwyn_prefs", Context.MODE_PRIVATE)
             .edit()
             .putInt("theme", 99)
             .putInt("default_mode", -5)
-            .apply()
+            .putInt("default_zoom", 42)
+            .putInt("brightness", -10)
+            .commit()
 
         val reloaded = Settings(context)
         assertEquals(AppTheme.SYSTEM, reloaded.theme)
         assertEquals(ReadingMode.CONTINUOUS, reloaded.defaultMode)
+        assertEquals(ZoomMode.FIT_WIDTH, reloaded.defaultZoom)
+        assertEquals(5, reloaded.readingBrightnessPercent)
     }
 
     @Test

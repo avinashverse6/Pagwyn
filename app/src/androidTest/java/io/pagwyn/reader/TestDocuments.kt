@@ -1,35 +1,54 @@
 package io.pagwyn.reader
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
-import java.util.zip.Deflater
 
 /**
  * Creates real PDF files on the device for instrumented tests.
  *
- * Files go through a [FileProvider] so the reader receives a `content://` URI, which
- * is exactly how documents arrive in production (Storage Access Framework or an
- * external `VIEW` intent).
+ * Files are shared through a test-only [FileProvider], so the reader receives a
+ * real `content://` URI exactly as it does in production (Storage Access
+ * Framework or an external `VIEW` intent).
  */
 object TestDocuments {
 
-    fun writePdf(context: Context, name: String, pageTexts: List<String>): Uri {
-        val dir = File(context.cacheDir, "test-documents").apply { mkdirs() }
-        val file = File(dir, name)
-        file.writeBytes(buildPdf(pageTexts))
-        return FileProvider.getUriForFile(context, "${context.packageName}.testprovider", file)
-    }
+    private const val AUTHORITY_SUFFIX = ".testprovider"
 
-    fun writeRaw(context: Context, name: String, bytes: ByteArray): Uri {
+    private val context: Context
+        get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    fun writePdf(name: String, pageTexts: List<String>): Uri =
+        writeRaw(name, buildPdf(pageTexts))
+
+    fun writeRaw(name: String, bytes: ByteArray): Uri {
         val dir = File(context.cacheDir, "test-documents").apply { mkdirs() }
         val file = File(dir, name)
         file.writeBytes(bytes)
-        return FileProvider.getUriForFile(context, "${context.packageName}.testprovider", file)
+        val uri = FileProvider.getUriForFile(context, context.packageName + AUTHORITY_SUFFIX, file)
+        // A persistable grant makes the URI behave like a SAF pick: the reader may
+        // store it and reopen it later, and revoking it is testable.
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        return uri
     }
 
-    /** Minimal, valid single/multi page PDF with the given text per page. */
+    fun revokeAccess(uri: Uri): Boolean = runCatching {
+        context.contentResolver.releasePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+        true
+    }.getOrDefault(false)
+
+    /** Minimal, valid multi-page PDF with one line of text per page. */
     fun buildPdf(pageTexts: List<String>): ByteArray {
         val out = java.io.ByteArrayOutputStream()
         fun write(text: String) = out.write(text.toByteArray(Charsets.ISO_8859_1))
@@ -59,11 +78,13 @@ object TestDocuments {
                 "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
                     "/Resources << /Font << /F1 3 0 R >> >> /Contents $contentNumber 0 R >>",
             )
-            val content = "BT /F1 14 Tf 60 780 Td ($text) Tj ET\n0 0 595 842 re S"
-            val deflated = deflate(content.toByteArray(Charsets.ISO_8859_1))
+            // Uncompressed content stream: the text extractor is the subject of some
+            // of these tests, so it must not depend on a filter implementation.
+            val content = "BT /F1 14 Tf 60 780 Td ($text) Tj ET\n0 0 595 842 re S\n"
+            val raw = content.toByteArray(Charsets.ISO_8859_1)
             offsets[contentNumber] = out.size()
-            write("$contentNumber 0 obj\n<< /Length ${deflated.size} /Filter /FlateDecode >>\nstream\n")
-            out.write(deflated)
+            write("$contentNumber 0 obj\n<< /Length ${raw.size} >>\nstream\n")
+            out.write(raw)
             write("\nendstream\nendobj\n")
         }
 
@@ -77,17 +98,4 @@ object TestDocuments {
         return out.toByteArray()
     }
 
-    private fun deflate(data: ByteArray): ByteArray {
-        val deflater = Deflater(Deflater.BEST_SPEED)
-        deflater.setInput(data)
-        deflater.finish()
-        val out = java.io.ByteArrayOutputStream(data.size)
-        val buffer = ByteArray(4096)
-        while (!deflater.finished()) {
-            val read = deflater.deflate(buffer)
-            out.write(buffer, 0, read)
-        }
-        deflater.end()
-        return out.toByteArray()
-    }
 }

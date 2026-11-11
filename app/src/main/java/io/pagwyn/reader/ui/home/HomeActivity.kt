@@ -304,6 +304,12 @@ class HomeActivity : AppCompatActivity() {
     @androidx.annotation.VisibleForTesting
     fun viewModelSnapshot(): HomeState = viewModel.state.value
 
+    /** Drives the search box the way the user's keyboard does. */
+    @androidx.annotation.VisibleForTesting
+    fun searchForTest(query: String) {
+        binding.searchField.setText(query)
+    }
+
     private companion object {
         const val ACTION_CONTINUE_READING = "io.pagwyn.reader.action.CONTINUE_READING"
         const val MENU_OPEN = 1

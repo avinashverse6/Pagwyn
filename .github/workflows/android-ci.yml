@@ -158,6 +158,60 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
 
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instrumented tests (API 24, x86_64 emulator)
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 24
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            ./gradlew connectedDebugAndroidTest --stacktrace \
+              || ./gradlew connectedDebugAndroidTest --stacktrace
+
+      - name: Collect instrumented test results
+        if: always()
+        run: |
+          python3 - <<'PYINST'
+          import glob, xml.etree.ElementTree as ET
+          total = failures = skipped = 0
+          rows = []
+          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  total += 1
+                  bad = [c for c in case if c.tag in ('failure', 'error')]
+                  if bad:
+                      failures += 1
+                      rows.append(f"- FAIL `{case.get('classname')}#{case.get('name')}`")
+                  elif any(c.tag == 'skipped' for c in case):
+                      skipped += 1
+          print(f"instrumented: {total} tests, {failures} failures, {skipped} skipped")
+          for row in rows[:20]:
+              print(row)
+          PYINST
+
+      - name: Upload instrumented test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: instrumented-test-results
+          path: app/build/outputs/androidTest-results/**
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:

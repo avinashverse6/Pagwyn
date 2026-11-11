@@ -1035,6 +1035,10 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     @androidx.annotation.VisibleForTesting
     fun viewModelSnapshot(): ReaderState = viewModel.state.value
 
+    /** The state holder, for instrumented tests that drive reader actions directly. */
+    @androidx.annotation.VisibleForTesting
+    internal fun viewModelForTest(): ReaderViewModel = viewModel
+
     companion object {
         private const val EXTRA_START_PAGE = "io.pagwyn.reader.extra.START_PAGE"
         private const val STATE_URI = "state_uri"
