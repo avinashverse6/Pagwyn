@@ -166,6 +166,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Instrumented tests (API 24, x86_64 emulator)
+        id: emulator
+        continue-on-error: true
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: 24
@@ -173,10 +175,54 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            ./gradlew connectedDebugAndroidTest --stacktrace \
-              || ./gradlew connectedDebugAndroidTest --stacktrace
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          # The action replaces the whole `script` with one shell script, so logging
+          # is done with a redirect rather than by chaining commands.
+          script: ./gradlew connectedDebugAndroidTest --stacktrace > /tmp/instrumented.log 2>&1; status=$?; tail -n 200 /tmp/instrumented.log; exit $status
+
+      - name: Post instrumented diagnostics on failure
+        if: always() && steps.emulator.outcome != 'success'
+        run: |
+          {
+            echo "### Instrumented tests did not pass (${{ steps.emulator.outcome }})"
+            echo
+            echo "**Gradle output** (last 120 lines)"
+            echo '```'
+            tail -n 120 /tmp/instrumented.log 2>/dev/null || echo "(no Gradle log: the emulator never started)"
+            echo '```'
+            echo "**Environment**"
+            echo '```'
+            echo "KVM: $(ls -l /dev/kvm 2>&1)"
+            echo "CPU: $(nproc) cores, $(grep -c -E 'vmx|svm' /proc/cpuinfo) vmx/svm flags"
+            sdkmanager --list_installed 2>/dev/null | grep -E 'system-images|emulator' || true
+            adb devices -l 2>&1 || true
+            echo '```'
+            if adb shell true 2>/dev/null; then
+              echo "**Logcat (errors)**"
+              echo '```'
+              adb logcat -d -t 200 '*:E' 2>/dev/null | tail -n 80 || true
+              echo '```'
+            fi
+          } > /tmp/inst.md
+          cat /tmp/inst.md
+          python3 - <<'PYDIAG'
+          import json, os, urllib.request
+          body = json.dumps({"body": open('/tmp/inst.md').read()[:60000]})
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=body.encode(),
+              headers={
+                  "Authorization": f"token {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PYDIAG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
 
       - name: Collect instrumented test results
         if: always()
