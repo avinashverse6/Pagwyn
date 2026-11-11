@@ -154,21 +154,23 @@ class PdfTextServiceTest {
     private class PdfTextServiceForTest(file: File) {
         private val document = PdfParser(file.absolutePath).parse(64)
 
-        fun search(query: String, limit: Int, cancel: () -> Boolean): List<io.pagwyn.reader.pdf.SearchHit> =
-            try {
-                val hits = mutableListOf<io.pagwyn.reader.pdf.SearchHit>()
-                val needle = query.trim().lowercase()
-                if (needle.isEmpty() || document == null) return hits
-                for (page in 0 until document.pageCount) {
+        fun search(query: String, limit: Int, cancel: () -> Boolean): List<io.pagwyn.reader.pdf.SearchHit> {
+            val hits = mutableListOf<io.pagwyn.reader.pdf.SearchHit>()
+            val needle = query.trim().lowercase()
+            val doc = document
+            if (needle.isEmpty() || doc == null) return hits
+            return try {
+                for (page in 0 until doc.pageCount) {
                     if (cancel()) break
-                    val text = document.pageText(page)
+                    val text = doc.pageText(page)
                     val index = text.lowercase().indexOf(needle)
                     if (index >= 0) hits.add(io.pagwyn.reader.pdf.SearchHit(page, text))
                     if (hits.size >= limit) break
                 }
                 hits
             } catch (e: Exception) {
-                emptyList()
+                hits
             }
+        }
     }
 }
