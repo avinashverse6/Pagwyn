@@ -98,6 +98,7 @@ jobs:
           cp "$DEBUG_APK" "pagwyn-debug.apk"
 
       - name: Publish verification report
+        if: always() && steps.verify.outcome == 'success'
         run: |
           python3 - <<'PY'
           import json, os, urllib.request
