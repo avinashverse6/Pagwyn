@@ -154,7 +154,7 @@ class PdfTextServiceTest {
     private class PdfTextServiceForTest(file: File) {
         private val document = PdfParser(file.absolutePath).parse(64)
 
-        fun search(query: String, limit: Int, cancel: () -> Boolean) =
+        fun search(query: String, limit: Int, cancel: () -> Boolean): List<io.pagwyn.reader.pdf.SearchHit> =
             try {
                 val hits = mutableListOf<io.pagwyn.reader.pdf.SearchHit>()
                 val needle = query.trim().lowercase()
