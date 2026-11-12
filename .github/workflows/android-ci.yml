@@ -195,7 +195,8 @@ jobs:
               # per-class XML has to be archived before the next run wipes it.
               mkdir -p "/tmp/results/$name"
               cp -r app/build/outputs/androidTest-results/. "/tmp/results/$name/" 2>/dev/null || true
-              echo "  results copied: $(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null | wc -l) xml in build dir" >> /tmp/class-results.txt
+              echo "  ::debug xml=$(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null | wc -l) total=$(find app/build/outputs/androidTest-results -type f 2>/dev/null | wc -l)" >> /tmp/class-results.txt
+              find app/build/outputs/androidTest-results -maxdepth 5 2>/dev/null | head -n 12 >> /tmp/class-results.txt
             }
             run_class io.pagwyn.reader.PdfDocumentTest
             run_class io.pagwyn.reader.ReaderInstrumentedTest
@@ -214,6 +215,7 @@ jobs:
 
       - name: Collect instrumented test results
         if: always()
+        id: collect
         run: |
           python3 - <<'PYINST'
           import glob, xml.etree.ElementTree as ET
