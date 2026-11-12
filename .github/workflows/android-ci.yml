@@ -202,6 +202,8 @@ jobs:
             mkdir -p /tmp/pagwyn-results/settings && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/settings/ 2>/dev/null
             ls /tmp/pagwyn-results
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
+            find /tmp/pagwyn-results -name 'TEST-*.xml' -exec sh -c 'echo "=== $1"; cat "$1"' _ {} \; > /tmp/xml-dump.txt 2>/dev/null
+            find /tmp/pagwyn-results -maxdepth 6 -name '*.*' | head -n 40
             test ! -e /tmp/pagwyn-results/pdf.fail -a ! -e /tmp/pagwyn-results/reader.fail -a ! -e /tmp/pagwyn-results/home.fail -a ! -e /tmp/pagwyn-results/settings.fail
 
       - name: Post emulator run log
@@ -218,13 +220,16 @@ jobs:
                   markers.append(f"{name}: FAIL")
           parts.append("**classes**\n```\n" + ("\n".join(markers) or "(none ran)") + "\n```")
           for label, path, limit in (
-              ("gradle test lines", "/tmp/instrumented.log", 8000),
+              ("gradle test lines", "/tmp/instrumented.log", 3000),
+              ("result xml", "/tmp/xml-dump.txt", 9000),
           ):
               try:
                   text = open(path, errors="replace").read()
               except OSError:
                   continue
               parts.append(f"**{label}**: {len(text)} chars")
+              if label.startswith("gradle"):
+                  pass
               if label.startswith("gradle"):
                   text = "\n".join(
                       line for line in text.splitlines()
