@@ -90,15 +90,21 @@ class ReaderInstrumentedTest {
     fun recordsTheDocumentInTheLibrary() {
         val uri = TestDocuments.writePdf("recorded.pdf", listOf("first", "second"))
         openPdf(uri) {
-            // The record is written on a background thread once the page count is known.
-            waitUntil(10_000) { store.find(uri)?.pageCount == 2 }
-            val document = store.find(uri)
+            // The record is written on a background thread once the page count is known,
+            // and trimHistory runs right after the insert, so this is eventually
+            // consistent rather than immediately so.
+            var document: io.pagwyn.reader.core.PagwynDocument? = null
+            waitUntil(15_000) {
+                document = store.find(uri)
+                document?.pageCount == 2
+            }
             assertEquals(
                 "document should be recorded with its page count: $document",
                 2,
                 document?.pageCount,
             )
             assertEquals(uri.toString(), settings.lastDocumentUri)
+            assertEquals("recorded.pdf", document?.displayName)
         }
     }
 
