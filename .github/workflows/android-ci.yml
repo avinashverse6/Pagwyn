@@ -213,6 +213,48 @@ jobs:
               exit 1
             fi
 
+      - name: Post emulator run log
+        if: always() && steps.emulator.outcome != 'skipped' && steps.emulator.outcome != ''
+        run: |
+          python3 - <<'PYLOG'
+          import json, os, urllib.request
+          parts = []
+          for label, path, limit in (
+              ("per-class results", "/tmp/class-results.txt", 4000),
+              ("gradle (test lines)", "/tmp/instrumented.log", 6000),
+          ):
+              try:
+                  text = open(path, errors="replace").read()
+              except OSError:
+                  continue
+              if label.startswith("gradle"):
+                  text = "\n".join(
+                      line for line in text.splitlines()
+                      if "Tests" in line or "FAILED" in line or "BUILD" in line or "device" in line.lower()
+                  )
+              parts.append(f"**{label}**\n```\n{text[-limit:]}\n```")
+          body = json.dumps({
+              "body": "### Instrumented run: %s\n\n%s" % (
+                  os.environ.get("OUTCOME", "?"), "\n\n".join(parts) or "(no output captured)"
+              )
+          })
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=body.encode(),
+              headers={
+                  "Authorization": f"token {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PYLOG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          OUTCOME: ${{ steps.emulator.outcome }}
+
       - name: Collect instrumented test results
         if: always()
         id: collect
