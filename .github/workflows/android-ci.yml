@@ -186,23 +186,20 @@ jobs:
           script: |
             : > /tmp/class-results.txt
             mkdir -p /tmp/results
-            run_class() {
-              ./gradlew connectedDebugAndroidTest \
-                -Pandroid.testInstrumentationRunnerArguments.class=$1 \
-                --stacktrace >> /tmp/instrumented.log 2>&1
-              echo "$1 -> exit $?" >> /tmp/class-results.txt
-              mkdir -p "/tmp/results/$1"
-              cp -r app/build/outputs/androidTest-results/. "/tmp/results/$1/" 2>/dev/null || true
-            }
-            run_class io.pagwyn.reader.PdfDocumentTest
-            run_class io.pagwyn.reader.ReaderInstrumentedTest
-            run_class io.pagwyn.reader.HomeLibraryTest
-            run_class io.pagwyn.reader.SettingsPersistenceTest
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1
+            echo "PdfDocumentTest exit=$?" >> /tmp/class-results.txt
+            mkdir -p /tmp/results/PdfDocumentTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/PdfDocumentTest/ 2>/dev/null; true
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1
+            echo "ReaderInstrumentedTest exit=$?" >> /tmp/class-results.txt
+            mkdir -p /tmp/results/ReaderInstrumentedTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/ReaderInstrumentedTest/ 2>/dev/null; true
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1
+            echo "HomeLibraryTest exit=$?" >> /tmp/class-results.txt
+            mkdir -p /tmp/results/HomeLibraryTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/HomeLibraryTest/ 2>/dev/null; true
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1
+            echo "SettingsPersistenceTest exit=$?" >> /tmp/class-results.txt
+            mkdir -p /tmp/results/SettingsPersistenceTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/SettingsPersistenceTest/ 2>/dev/null; true
             cat /tmp/class-results.txt
-            grep -h -A 6 "<failure" /tmp/results/*/*/*/*.xml >> /tmp/class-results.txt 2>/dev/null || true
-            cat /tmp/class-results.txt
-            if grep -q -- "-> exit [^0]" /tmp/class-results.txt; then exit 1; fi
-            exit 0
+            if grep -q "exit=[^0]" /tmp/class-results.txt; then exit 1; fi
 
       - name: Post emulator run log
         if: always() && steps.emulator.outcome != 'skipped' && steps.emulator.outcome != ''
