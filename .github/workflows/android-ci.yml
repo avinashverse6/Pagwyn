@@ -265,10 +265,14 @@ jobs:
               classes = open('/tmp/class-results.txt').read().strip()
           except OSError:
               pass
+          archived = glob.glob('/tmp/results/**/*.xml', recursive=True)
+          scanned = glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
           lines = [
               "### Instrumented tests (Android 7.0 / API 24, x86_64 emulator)",
               "",
               f"**{total} tests, {failures} failures, {skipped} skipped**",
+              "",
+              f"result files: archived={len(archived)} workspace={len(scanned)}",
               "",
           ]
           if classes:
