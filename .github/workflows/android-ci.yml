@@ -181,37 +181,31 @@ jobs:
           # runs in its own Gradle invocation: on API 24 an
           # instrumentation crash ends the whole run, which would hide the results of
           # the classes that had not started yet.
+          # The action runs this as one shell script. Only POSIX-sh built-ins are
+          # used (no `local`, no bash-only syntax) because the shell is not bash.
           script: |
             : > /tmp/class-results.txt
             mkdir -p /tmp/results
             run_class() {
-              local name="$1"
               ./gradlew connectedDebugAndroidTest \
-                -Pandroid.testInstrumentationRunnerArguments.class="$name" \
+                -Pandroid.testInstrumentationRunnerArguments.class=$1 \
                 --stacktrace >> /tmp/instrumented.log 2>&1
-              local status=$?
-              echo "$name -> exit $status" >> /tmp/class-results.txt
-              # Each Gradle run rewrites app/build/outputs/androidTest-results, so the
-              # per-class XML has to be archived before the next run wipes it.
-              mkdir -p "/tmp/results/$name"
-              cp -r app/build/outputs/androidTest-results/. "/tmp/results/$name/" 2>/dev/null || true
-              echo "  ::debug xml=$(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null | wc -l) total=$(find app/build/outputs/androidTest-results -type f 2>/dev/null | wc -l)" >> /tmp/class-results.txt
-              find app/build/outputs/androidTest-results -maxdepth 5 2>/dev/null | head -n 12 >> /tmp/class-results.txt
+              STATUS=$?
+              echo "$1 -> exit $STATUS" >> /tmp/class-results.txt
+              # Each run rewrites app/build/outputs/androidTest-results, so the per-class
+              # XML is archived before the next run wipes it.
+              mkdir -p "/tmp/results/$1"
+              cp -r app/build/outputs/androidTest-results/. "/tmp/results/$1/" 2>/dev/null || true
+              echo "  xml-copied=$(find /tmp/results/$1 -name '*.xml' 2>/dev/null | wc -l)" >> /tmp/class-results.txt
+              return 0
             }
             run_class io.pagwyn.reader.PdfDocumentTest
             run_class io.pagwyn.reader.ReaderInstrumentedTest
             run_class io.pagwyn.reader.HomeLibraryTest
             run_class io.pagwyn.reader.SettingsPersistenceTest
             cat /tmp/class-results.txt
-            if [ "$(grep -c -- '-> exit 0' /tmp/class-results.txt)" -ne 4 ]; then
-              while read -r line; do
-                case "$line" in
-                  *"-> exit 0") ;;
-                  *) printf 'not ok - %s\n' "$line" ;;
-                esac
-              done < /tmp/class-results.txt
-              exit 1
-            fi
+            grep -q -- '-> exit [^0]' /tmp/class-results.txt && exit 1
+            exit 0
 
       - name: Post emulator run log
         if: always() && steps.emulator.outcome != 'skipped' && steps.emulator.outcome != ''
