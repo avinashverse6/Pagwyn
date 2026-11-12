@@ -126,6 +126,14 @@ class PdfDocument private constructor(
 
     fun pageText(index: Int): String? = textService?.pageText(index)
 
+    /** Filesystem path used for text extraction; diagnostics only. */
+    @androidx.annotation.VisibleForTesting
+    internal fun textPathForTest(): String? = textService?.filePath
+
+    /** Number of pages the text parser recovered; diagnostics only. */
+    @androidx.annotation.VisibleForTesting
+    internal fun parsePageCountForTest(): Int = textService?.pageCount() ?: -1
+
     /** Case-insensitive search across the document, executed on the calling thread. */
     fun search(query: String, limit: Int, shouldCancel: () -> Boolean): List<SearchHit> {
         val service = textService ?: return emptyList()

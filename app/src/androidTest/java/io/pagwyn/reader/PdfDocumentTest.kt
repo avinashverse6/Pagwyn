@@ -138,8 +138,17 @@ class PdfDocumentTest {
     fun textCanBeExtractedFromAGeneratedDocument() {
         val uri = TestDocuments.writePdf("text.pdf", listOf("Extractable sentence", "Second page"))
         withDocument(uri) { document ->
-            assertTrue("document should expose a text layer", document.hasTextLayer)
+            val pageText = document.pageText(0)
             val hits = document.search("Extractable", 10) { false }
+            if (hits.isEmpty()) {
+                fail(
+                    "no hits for a generated PDF. " +
+                        "hasTextLayer=${document.hasTextLayer} " +
+                        "textPath=${document.textPathForTest()} " +
+                        "pageText0=${pageText?.let { "'" + it.take(120) + "'" }} " +
+                        "parserOutput=${document.parsePageCountForTest()}",
+                )
+            }
             assertEquals(1, hits.size)
             assertEquals(0, hits.first().pageIndex)
         }
