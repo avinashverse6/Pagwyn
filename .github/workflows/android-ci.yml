@@ -188,16 +188,20 @@ jobs:
             # its own and the exit status has to be captured immediately.
             : > /tmp/class-results.txt
             mkdir -p /tmp/results
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1; PDF_STATUS=$?
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1
+            PDF_STATUS=$?
             echo "PdfDocumentTest exit=$PDF_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/PdfDocumentTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/PdfDocumentTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1; READER_STATUS=$?
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1
+            READER_STATUS=$?
             echo "ReaderInstrumentedTest exit=$READER_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/ReaderInstrumentedTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/ReaderInstrumentedTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1; HOME_STATUS=$?
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1
+            HOME_STATUS=$?
             echo "HomeLibraryTest exit=$HOME_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/HomeLibraryTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/HomeLibraryTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1; SETTINGS_STATUS=$?
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1
+            SETTINGS_STATUS=$?
             echo "SettingsPersistenceTest exit=$SETTINGS_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/SettingsPersistenceTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/SettingsPersistenceTest/ 2>/dev/null; true
             cat /tmp/class-results.txt
@@ -317,6 +321,17 @@ jobs:
               lines += ["```", classes, "```", ""]
           if rows:
               lines += ["Failing:", ""] + rows[:20] + [""]
+              for path in paths:
+                  try:
+                      root = ET.parse(path).getroot()
+                  except Exception:
+                      continue
+                  for case in root.iter('testcase'):
+                      for child in case:
+                          if child.tag not in ('failure', 'error'):
+                              continue
+                          detail = ((child.text or '') + (child.get('message') or '')).strip().splitlines()
+                          lines += [f"`{case.get('name')}`: " + (detail[0][:300] if detail else "no message"), ""]
           body = json.dumps({"body": "\n".join(lines)})
           req = urllib.request.Request(
               f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",

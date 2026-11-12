@@ -90,7 +90,8 @@ class ReaderInstrumentedTest {
     fun recordsTheDocumentInTheLibrary() {
         val uri = TestDocuments.writePdf("recorded.pdf", listOf("first", "second"))
         openPdf(uri) {
-            waitUntil { store.find(uri) != null }
+            // The record is written on a background thread once the page count is known.
+            waitUntil(10_000) { store.find(uri)?.pageCount == 2 }
             val document = store.find(uri)
             assertNotNull("opened document must be recorded", document)
             assertEquals(2, document!!.pageCount)
