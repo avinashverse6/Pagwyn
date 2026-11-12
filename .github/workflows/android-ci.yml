@@ -188,13 +188,33 @@ jobs:
           {
             echo "### Instrumented tests did not pass (${{ steps.emulator.outcome }})"
             echo
-            echo "**Failing tests**"
+            echo "**Failing tests and assertion messages**"
             echo '```'
-            grep -aE "^[a-z0-9_.]+ > .*FAILED" /tmp/instrumented.log | sed 's/\x1b\[[0-9;]*m//g' | head -n 30 || true
+            python3 - <<'PYXML' || echo "(no XML results)"
+          import glob, xml.etree.ElementTree as ET
+          shown = 0
+          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for child in case:
+                      if child.tag not in ('failure', 'error'):
+                          continue
+                      shown += 1
+                      print(f"{case.get('classname')}#{case.get('name')}")
+                      text = (child.text or '') + (child.get('message') or '')
+                      for line in text.splitlines()[:8]:
+                          print('    ' + line.strip()[:200])
+                      print()
+          if not shown:
+              print("(no failing test cases recorded)")
+          PYXML
             echo '```'
-            echo "**Crash / error logcat**"
+            echo "**Instrumentation / crash logcat**"
             echo '```'
-            grep -aE "FATAL EXCEPTION|AndroidRuntime|pagwyn|Caused by|ActivityManager: Force|INSTRUMENTATION" /tmp/logcat.txt 2>/dev/null | grep -av "^--------" | head -n 40 || echo "(no logcat captured)"
+            grep -aE "FATAL EXCEPTION|FATAL|Force finishing|ANR in|OutOfMemory|Process crashed|INSTRUMENTATION_|TestRunner: failed|Process: io.pagwyn" /tmp/logcat.txt 2>/dev/null | head -n 40 || echo "(no crash lines)"
             echo '```'
             echo "**Gradle failure lines**"
             echo '```'
@@ -211,12 +231,6 @@ jobs:
             sdkmanager --list_installed 2>/dev/null | grep -E 'system-images|emulator' || true
             adb devices -l 2>&1 || true
             echo '```'
-            if adb shell true 2>/dev/null; then
-              echo "**Logcat (errors)**"
-              echo '```'
-              adb logcat -d -t 200 '*:E' 2>/dev/null | tail -n 80 || true
-              echo '```'
-            fi
           } > /tmp/inst.md
           cat /tmp/inst.md
           python3 - <<'PYDIAG'
