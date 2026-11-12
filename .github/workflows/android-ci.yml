@@ -177,83 +177,32 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
           # The action replaces the whole `script` with one shell script, so logging
-          # is done with a redirect rather than by chaining commands.
-          # `--continue` lets every class run, so one crash cannot hide the rest of the
-          # results. Logcat is captured for crash diagnosis.
-          # `--continue` runs every class so one crash cannot hide the rest of the
-          # classes. Note: adb commands are not allowed inside this script (the action
-          # owns adb), so diagnostics come from Gradle output and the XML results.
-          script: ./gradlew connectedDebugAndroidTest --stacktrace --continue > /tmp/instrumented.log 2>&1; status=$?; tail -n 200 /tmp/instrumented.log; exit $status
-
-      - name: Post instrumented diagnostics on failure
-        if: always() && steps.emulator.outcome != 'success'
-        run: |
-          {
-            echo "### Instrumented tests did not pass (${{ steps.emulator.outcome }})"
-            echo
-            echo "**Failing tests and assertion messages**"
-            echo '```'
-            python3 - <<'PYXML' || echo "(no XML results)"
-          import glob, xml.etree.ElementTree as ET
-          shown = 0
-          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
-              try:
-                  root = ET.parse(path).getroot()
-              except Exception:
-                  continue
-              for case in root.iter('testcase'):
-                  for child in case:
-                      if child.tag not in ('failure', 'error'):
-                          continue
-                      shown += 1
-                      print(f"{case.get('classname')}#{case.get('name')}")
-                      text = (child.text or '') + (child.get('message') or '')
-                      for line in text.splitlines()[:8]:
-                          print('    ' + line.strip()[:200])
-                      print()
-          if not shown:
-              print("(no failing test cases recorded)")
-          PYXML
-            echo '```'
-            echo "**Instrumentation / crash logcat**"
-            echo '```'
-            grep -aE "FATAL EXCEPTION|FATAL|Force finishing|ANR in|OutOfMemory|Process crashed|INSTRUMENTATION_|TestRunner: failed|Process: io.pagwyn" /tmp/logcat.txt 2>/dev/null | head -n 40 || echo "(no crash lines)"
-            echo '```'
-            echo "**Gradle failure lines**"
-            echo '```'
-            grep -nE "FAILURE:|What went wrong|Caused by:|No connected devices|error:|FAILED|Execution failed|Installation|not found|IOException" /tmp/instrumented.log 2>/dev/null | head -n 30 || echo "(no Gradle log: the emulator never started)"
-            echo '```'
-            echo "**Gradle output** (last 30 lines)"
-            echo '```'
-            grep -vE "^\s+at |^> Task " /tmp/instrumented.log 2>/dev/null | tail -n 30 || true
-            echo '```'
-            echo "**Environment**"
-            echo '```'
-            echo "KVM: $(ls -l /dev/kvm 2>&1)"
-            echo "CPU: $(nproc) cores, $(grep -c -E 'vmx|svm' /proc/cpuinfo) vmx/svm flags"
-            sdkmanager --list_installed 2>/dev/null | grep -E 'system-images|emulator' || true
-            adb devices -l 2>&1 || true
-            echo '```'
-          } > /tmp/inst.md
-          cat /tmp/inst.md
-          python3 - <<'PYDIAG'
-          import json, os, urllib.request
-          body = json.dumps({"body": open('/tmp/inst.md').read()[:60000]})
-          req = urllib.request.Request(
-              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
-              data=body.encode(),
-              headers={
-                  "Authorization": f"token {os.environ['GH_TOKEN']}",
-                  "Accept": "application/vnd.github+json",
-                  "Content-Type": "application/json",
-              },
-          )
-          urllib.request.urlopen(req).read()
-          PYDIAG
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
+          # is done with a redirect rather than by chaining commands. Each test class
+          # runs in its own Gradle invocation: on API 24 an
+          # instrumentation crash ends the whole run, which would hide the results of
+          # the classes that had not started yet.
+          script: |
+            : > /tmp/class-results.txt
+            run_class() {
+              ./gradlew connectedDebugAndroidTest \
+                -Pandroid.testInstrumentationRunnerArguments.class=$1 \
+                --stacktrace >> /tmp/instrumented.log 2>&1
+              echo "$1 -> exit $?" >> /tmp/class-results.txt
+            }
+            run_class io.pagwyn.reader.PdfDocumentTest
+            run_class io.pagwyn.reader.ReaderInstrumentedTest
+            run_class io.pagwyn.reader.HomeLibraryTest
+            run_class io.pagwyn.reader.SettingsPersistenceTest
+            cat /tmp/class-results.txt
+            if [ "$(grep -c -- '-> exit 0' /tmp/class-results.txt)" -ne 4 ]; then
+              while read -r line; do
+                case "$line" in
+                  *"-> exit 0") ;;
+                  *) printf 'not ok - %s\n' "$line" ;;
+                esac
+              done < /tmp/class-results.txt
+              exit 1
+            fi
 
       - name: Collect instrumented test results
         if: always()

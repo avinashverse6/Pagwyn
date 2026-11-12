@@ -141,11 +141,19 @@ class PdfDocumentTest {
             val pageText = document.pageText(0)
             val hits = document.search("Extractable", 10) { false }
             if (hits.isEmpty()) {
+                val path = document.textPathForTest()
+                val file = path?.let { java.io.File(it) }
+                val head = file?.let { f -> runCatching { f.inputStream().use { input ->
+                    val buffer = ByteArray(16)
+                    val read = input.read(buffer)
+                    String(buffer, 0, read.coerceAtLeast(0), Charsets.ISO_8859_1)
+                } }.getOrNull() }
                 fail(
                     "no hits for a generated PDF. " +
-                        "hasTextLayer=${document.hasTextLayer} " +
-                        "textPath=${document.textPathForTest()} " +
-                        "pageText0=${pageText?.let { "'" + it.take(120) + "'" }} " +
+                        "uri=${document.source.uri} name=${document.source.displayName} " +
+                        "hasTextLayer=${document.hasTextLayer} textPath=$path " +
+                        "pathLength=${file?.length()} sourceLength=${document.source.size} " +
+                        "pathHead=$head pageText0=${pageText?.let { "'" + it.take(120) + "'" }} " +
                         "parserOutput=${document.parsePageCountForTest()}",
                 )
             }
