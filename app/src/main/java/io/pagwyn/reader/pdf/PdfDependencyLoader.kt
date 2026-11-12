@@ -37,8 +37,23 @@ internal object PdfDependencyLoader {
      * is capped at [COPY_LIMIT_BYTES] so a hostile or huge document cannot fill the
      * disk, and it is deleted when the reader closes the document.
      */
-    fun resolveReadablePath(context: Context, uri: Uri, fdPath: String?): String? {
-        if (fdPath != null && File(fdPath).let { it.isFile && it.canRead() }) return fdPath
+    fun resolveReadablePath(
+        context: Context,
+        uri: Uri,
+        fdPath: String?,
+        expectedSize: Long = -1L,
+    ): String? {
+        // A path is only trusted when it demonstrably refers to this document. On some
+        // providers /proc/self/fd resolves to a different cached file (observed on an
+        // API 24 emulator), so the size of the fd is compared with the file behind the
+        // path before the parser is allowed to read it.
+        if (fdPath != null) {
+            val candidate = File(fdPath)
+            val sameSize = expectedSize > 0 && candidate.length() == expectedSize
+            if (candidate.isFile && candidate.canRead() && (expectedSize <= 0 || sameSize)) {
+                return fdPath
+            }
+        }
         if (uri.scheme == "file") {
             val path = uri.path ?: return null
             return path.takeIf { File(it).isFile && File(it).canRead() }

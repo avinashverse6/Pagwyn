@@ -187,8 +187,11 @@ class PdfDocument private constructor(
             PdfDependencyLoader.ensureLoaded(context)
             val textDescriptor = openDescriptor(context, uri)
             val fdPath = textDescriptor?.let { PdfTextService.descriptorPath(it) }
+            // `statSize` is the authoritative size of the open document; it is used to
+            // validate any /proc path before text extraction trusts it.
+            val descriptorSize = runCatching { textDescriptor?.statSize ?: -1L }.getOrDefault(-1L)
             val textPath = runCatching {
-                PdfDependencyLoader.resolveReadablePath(context, uri, fdPath)
+                PdfDependencyLoader.resolveReadablePath(context, uri, fdPath, descriptorSize)
             }.getOrNull()
             val textPathIsCopy = textPath != null && (fdPath == null || textPath != fdPath)
             if (!textPathIsCopy) textDescriptor?.closeSafely()
