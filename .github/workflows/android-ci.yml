@@ -180,7 +180,10 @@ jobs:
           # is done with a redirect rather than by chaining commands.
           # `--continue` lets every class run, so one crash cannot hide the rest of the
           # results. Logcat is captured for crash diagnosis.
-          script: adb logcat -c; ./gradlew connectedDebugAndroidTest --stacktrace --continue > /tmp/instrumented.log 2>&1; status=$?; adb logcat -d -v brief > /tmp/logcat.txt 2>/dev/null; tail -n 200 /tmp/instrumented.log; exit $status
+          # `--continue` runs every class so one crash cannot hide the rest of the
+          # classes. Note: adb commands are not allowed inside this script (the action
+          # owns adb), so diagnostics come from Gradle output and the XML results.
+          script: ./gradlew connectedDebugAndroidTest --stacktrace --continue > /tmp/instrumented.log 2>&1; status=$?; tail -n 200 /tmp/instrumented.log; exit $status
 
       - name: Post instrumented diagnostics on failure
         if: always() && steps.emulator.outcome != 'success'

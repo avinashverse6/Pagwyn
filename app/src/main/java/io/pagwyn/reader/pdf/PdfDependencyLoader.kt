@@ -44,6 +44,7 @@ internal object PdfDependencyLoader {
             return path.takeIf { File(it).isFile && File(it).canRead() }
         }
         val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }
+        removeStaleCopies(dir)
         val target = File(dir, "doc-" + Integer.toHexString(uri.toString().hashCode()) + ".pdf")
         // Always copy afresh: a partially written file from an interrupted copy would
         // otherwise be reused and silently disable text extraction.
@@ -75,6 +76,16 @@ internal object PdfDependencyLoader {
     }
 
     /**
+     * Deletes cache copies left behind by a previous process (for example when the
+     * system killed Pagwyn while reading). Keeps at most [MAX_STALE_COPIES] so a
+     * large library never fills the cache.
+     */
+    private fun removeStaleCopies(dir: File) {
+        val copies = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }
+        copies?.drop(MAX_STALE_COPIES)?.forEach { runCatching { it.delete() } }
+    }
+
+    /**
      * Removes a cache copy created by [resolveReadablePath]; a no-op for real
      * documents. Only files inside a `text-cache` directory are ever deleted, so a
      * user's PDF can never be removed by mistake.
@@ -89,4 +100,5 @@ internal object PdfDependencyLoader {
     private const val CACHE_DIR = "text-cache"
     private const val COPY_LIMIT_BYTES = 64L * 1024 * 1024
     private const val COPY_BUFFER_BYTES = 64 * 1024
+    private const val MAX_STALE_COPIES = 8
 }

@@ -172,6 +172,15 @@ class PdfDocument private constructor(
             val descriptor = openDescriptor(context, uri)
                 ?: throw PdfOpenException.NotFound()
 
+            // Work out where the raw bytes are readable *before* handing the descriptor
+            // to PdfRenderer. The renderer owns the descriptor, and once it is closed
+            // (or its number reused) /proc/self/fd no longer identifies this document.
+            val fdPath = PdfTextService.descriptorPath(descriptor)
+            val textPath = runCatching {
+                PdfDependencyLoader.ensureLoaded(context)
+                PdfDependencyLoader.resolveReadablePath(context, uri, fdPath)
+            }.getOrNull()
+
             val renderer = try {
                 PdfRenderer(descriptor)
             } catch (e: SecurityException) {
@@ -196,12 +205,7 @@ class PdfDocument private constructor(
 
             // Text extraction is best effort. A failure here must never block opening:
             // reading a scanned PDF is still perfectly valid.
-            val fdPath = PdfTextService.descriptorPath(descriptor)
-            val textPath = runCatching {
-                PdfDependencyLoader.ensureLoaded(context)
-                PdfDependencyLoader.resolveReadablePath(context, uri, fdPath)
-            }.getOrNull()
-            val textService = runCatching { PdfTextService(descriptor, textPath) }.getOrNull()
+            val textService = runCatching { PdfTextService(textPath) }.getOrNull()
 
             return PdfDocument(
                 source = source ?: DocumentResolver.resolve(context, uri),

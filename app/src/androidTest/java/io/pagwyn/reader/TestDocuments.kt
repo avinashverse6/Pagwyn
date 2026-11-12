@@ -54,6 +54,7 @@ object TestDocuments {
         fun write(text: String) = out.write(text.toByteArray(Charsets.ISO_8859_1))
 
         write("%PDF-1.4\n")
+        write("%\u00e2\u00e3\u00cf\u00d3\n")
         val pageObjects = pageTexts.indices.map { 4 + it * 2 }
         val offsets = HashMap<Int, Int>()
 

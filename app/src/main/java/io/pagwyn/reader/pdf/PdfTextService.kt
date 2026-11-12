@@ -19,21 +19,26 @@ import java.nio.charset.StandardCharsets
  *  - Bounded work: at most [MAX_PAGES_SCANNED] pages are parsed per document and
  *    the total extracted character budget is capped, so a 5000 page file cannot
  *    stall the app.
- *  - Streaming: the file is read through a random access handle, never fully
- *    buffered in memory.
+ *  - Bounded memory: the parser reads the file into one byte array and caps it at
+ *    [MAX_FILE_BYTES], so a huge document degrades to "no text layer" instead of
+ *    risking an `OutOfMemoryError` on a low-memory device.
  */
 class PdfTextService(
-    descriptor: ParcelFileDescriptor,
-    /** Pre-resolved filesystem path, when the caller already worked one out. */
-    resolvedPath: String? = null,
+    /** Filesystem path to the raw bytes, or null when the document is not readable. */
+    private val readablePath: String?,
 ) : AutoCloseable {
 
     /** Filesystem path the text engine reads from; null when the document is opaque. */
-    internal val filePath: String? = resolvedPath ?: descriptorPath(descriptor)
+    internal val filePath: String? get() = readablePath
 
     /** Lazily built page index to text: parsing stops as soon as it is not needed. */
     private val parsed: ParsedDocument? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         val path = filePath ?: return@lazy null
+        val size = runCatching { java.io.File(path).length() }.getOrDefault(0L)
+        if (size <= 0L || size > MAX_FILE_BYTES) {
+            Log.d(TAG, "Text extraction skipped for a document of $size bytes.")
+            return@lazy null
+        }
         runCatching { PdfParser(path).parse(MAX_PAGES_SCANNED) }
             .onFailure { Log.d(TAG, "Text extraction unavailable: ${it.message}") }
             .getOrNull()
@@ -87,6 +92,9 @@ class PdfTextService(
     internal companion object {
         const val TAG = "PagwynText"
         const val MAX_PAGES_SCANNED = 4000
+
+        /** Above this size the text layer is skipped to protect memory on old devices. */
+        const val MAX_FILE_BYTES = 48L * 1024 * 1024
         const val SNIPPET_RADIUS = 42
 
         /**
