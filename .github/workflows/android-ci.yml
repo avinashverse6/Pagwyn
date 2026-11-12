@@ -221,6 +221,7 @@ jobs:
                   text = open(path, errors="replace").read()
               except OSError:
                   continue
+              parts.append(f"**{label}**: {len(text)} chars")
               if label.startswith("gradle"):
                   text = "\n".join(
                       line for line in text.splitlines()
@@ -232,6 +233,7 @@ jobs:
                   os.environ.get("OUTCOME", "?"), "\n\n".join(parts) or "(no output captured)"
               )
           })
+          print(body)
           req = urllib.request.Request(
               f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
               data=body.encode(),
