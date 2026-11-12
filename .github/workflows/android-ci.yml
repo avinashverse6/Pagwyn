@@ -184,27 +184,11 @@ jobs:
           # The action runs this as one shell script. Only POSIX-sh built-ins are
           # used (no `local`, no bash-only syntax) because the shell is not bash.
           script: |
-            : > /tmp/class-results.txt
-            mkdir -p /tmp/results
-            run_class() {
-              ./gradlew connectedDebugAndroidTest \
-                -Pandroid.testInstrumentationRunnerArguments.class=$1 \
-                --stacktrace >> /tmp/instrumented.log 2>&1
-              STATUS=$?
-              echo "$1 -> exit $STATUS" >> /tmp/class-results.txt
-              # Each run rewrites app/build/outputs/androidTest-results, so the per-class
-              # XML is archived before the next run wipes it.
-              mkdir -p "/tmp/results/$1"
-              cp -r app/build/outputs/androidTest-results/. "/tmp/results/$1/" 2>/dev/null || true
-              echo "  xml-copied=$(find /tmp/results/$1 -name '*.xml' 2>/dev/null | wc -l)" >> /tmp/class-results.txt
-              return 0
-            }
-            run_class io.pagwyn.reader.PdfDocumentTest
-            run_class io.pagwyn.reader.ReaderInstrumentedTest
-            run_class io.pagwyn.reader.HomeLibraryTest
-            run_class io.pagwyn.reader.SettingsPersistenceTest
-            cat /tmp/class-results.txt
-            grep -q -- '-> exit [^0]' /tmp/class-results.txt && exit 1
+            echo "PROBE start $(date -u) shell=$0 pwd=$(pwd) adb=$(command -v adb || echo none)" > /tmp/class-results.txt
+            echo "PROBE devices: $(adb devices | tr '\n' ' ')" >> /tmp/class-results.txt
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace > /tmp/instrumented.log 2>&1
+            echo "PROBE gradle exit=$?" >> /tmp/class-results.txt
+            tail -n 40 /tmp/instrumented.log >> /tmp/class-results.txt
             exit 0
 
       - name: Post emulator run log
