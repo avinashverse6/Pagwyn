@@ -183,31 +183,26 @@ jobs:
           # the classes that had not started yet.
           # The action runs this as one shell script. Only POSIX-sh built-ins are
           # used (no `local`, no bash-only syntax) because the shell is not bash.
+          # The emulator action runs this as a single shell script with `set -e`, and
+          # variable/marker expansions are unreliable in that context. So: no
+          # expansion, one explicit command per class, and pass/fail recorded as marker
+          # files. Every class runs even when an earlier one fails, because on API 24 a
+          # failing instrumentation run otherwise hides all later results.
           script: |
-            # The emulator action runs this script with `set -e`, which would abort the
-            # run at the first failing class and hide the remaining results.
             set +e
-            : > /tmp/class-results.txt
-            mkdir -p /tmp/results
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1
-            PDF_STATUS=$?
-            echo "PdfDocumentTest exit=$PDF_STATUS" >> /tmp/class-results.txt
-            mkdir -p /tmp/results/PdfDocumentTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/PdfDocumentTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1
-            READER_STATUS=$?
-            echo "ReaderInstrumentedTest exit=$READER_STATUS" >> /tmp/class-results.txt
-            mkdir -p /tmp/results/ReaderInstrumentedTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/ReaderInstrumentedTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1
-            HOME_STATUS=$?
-            echo "HomeLibraryTest exit=$HOME_STATUS" >> /tmp/class-results.txt
-            mkdir -p /tmp/results/HomeLibraryTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/HomeLibraryTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1
-            SETTINGS_STATUS=$?
-            echo "SettingsPersistenceTest exit=$SETTINGS_STATUS" >> /tmp/class-results.txt
-            mkdir -p /tmp/results/SettingsPersistenceTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/SettingsPersistenceTest/ 2>/dev/null; true
-            cat /tmp/class-results.txt
-            if [ "$PDF_STATUS$READER_STATUS$HOME_STATUS$SETTINGS_STATUS" != "0000" ]; then exit 1; fi
-            exit 0
+            rm -rf /tmp/pagwyn-results
+            mkdir -p /tmp/pagwyn-results
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
+            mkdir -p /tmp/pagwyn-results/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/pdf/ 2>/dev/null
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace > /tmp/log-reader.txt 2>&1 && touch /tmp/pagwyn-results/reader.pass || touch /tmp/pagwyn-results/reader.fail
+            mkdir -p /tmp/pagwyn-results/reader && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/reader/ 2>/dev/null
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace > /tmp/log-home.txt 2>&1 && touch /tmp/pagwyn-results/home.pass || touch /tmp/pagwyn-results/home.fail
+            mkdir -p /tmp/pagwyn-results/home && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/home/ 2>/dev/null
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace > /tmp/log-settings.txt 2>&1 && touch /tmp/pagwyn-results/settings.pass || touch /tmp/pagwyn-results/settings.fail
+            mkdir -p /tmp/pagwyn-results/settings && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/settings/ 2>/dev/null
+            ls /tmp/pagwyn-results
+            cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
+            test ! -e /tmp/pagwyn-results/pdf.fail -a ! -e /tmp/pagwyn-results/reader.fail -a ! -e /tmp/pagwyn-results/home.fail -a ! -e /tmp/pagwyn-results/settings.fail
 
       - name: Post emulator run log
         if: always() && steps.emulator.outcome != 'skipped' && steps.emulator.outcome != ''
@@ -215,9 +210,15 @@ jobs:
           python3 - <<'PYLOG'
           import json, os, urllib.request
           parts = []
+          markers = []
+          for name in ("pdf", "reader", "home", "settings"):
+              if os.path.exists(f"/tmp/pagwyn-results/{name}.pass"):
+                  markers.append(f"{name}: pass")
+              elif os.path.exists(f"/tmp/pagwyn-results/{name}.fail"):
+                  markers.append(f"{name}: FAIL")
+          parts.append("**classes**\n```\n" + ("\n".join(markers) or "(none ran)") + "\n```")
           for label, path, limit in (
-              ("per-class results", "/tmp/class-results.txt", 4000),
-              ("gradle (test lines)", "/tmp/instrumented.log", 6000),
+              ("gradle test lines", "/tmp/instrumented.log", 8000),
           ):
               try:
                   text = open(path, errors="replace").read()
@@ -261,7 +262,7 @@ jobs:
           import glob, xml.etree.ElementTree as ET
           total = failures = skipped = 0
           rows = []
-          paths = glob.glob('/tmp/results/**/*.xml', recursive=True) + \
+          paths = glob.glob('/tmp/pagwyn-results/**/*.xml', recursive=True) + \
               glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
           for path in paths:
               try:
@@ -288,7 +289,7 @@ jobs:
           import glob, json, os, urllib.request, xml.etree.ElementTree as ET
           total = failures = skipped = 0
           rows = []
-          paths = glob.glob('/tmp/results/**/*.xml', recursive=True) + \
+          paths = glob.glob('/tmp/pagwyn-results/**/*.xml', recursive=True) + \
               glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
           for path in paths:
               try:
@@ -303,12 +304,14 @@ jobs:
                       rows.append(f"- `{case.get('classname').split('.')[-1]}#{case.get('name')}`")
                   elif any(c.tag == 'skipped' for c in case):
                       skipped += 1
-          classes = ''
-          try:
-              classes = open('/tmp/class-results.txt').read().strip()
-          except OSError:
-              pass
-          archived = glob.glob('/tmp/results/**/*.xml', recursive=True)
+          classes = ""
+          import os as _os
+          for marker in ("pdf", "reader", "home", "settings"):
+              if _os.path.exists(f"/tmp/pagwyn-results/{marker}.pass"):
+                  classes += f"{marker}: pass\n"
+              elif _os.path.exists(f"/tmp/pagwyn-results/{marker}.fail"):
+                  classes += f"{marker}: FAIL\n"
+          archived = glob.glob('/tmp/pagwyn-results/**/*.xml', recursive=True)
           scanned = glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
           lines = [
               "### Instrumented tests (Android 7.0 / API 24, x86_64 emulator)",
@@ -356,7 +359,7 @@ jobs:
         with:
           name: instrumented-test-results
           path: |
-            /tmp/results/**
+            /tmp/pagwyn-results/**
             app/build/outputs/androidTest-results/**
           retention-days: 7
           if-no-files-found: ignore
