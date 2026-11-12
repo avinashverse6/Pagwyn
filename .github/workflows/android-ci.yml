@@ -183,11 +183,18 @@ jobs:
           # the classes that had not started yet.
           script: |
             : > /tmp/class-results.txt
+            mkdir -p /tmp/results
             run_class() {
+              local name="$1"
               ./gradlew connectedDebugAndroidTest \
-                -Pandroid.testInstrumentationRunnerArguments.class=$1 \
+                -Pandroid.testInstrumentationRunnerArguments.class="$name" \
                 --stacktrace >> /tmp/instrumented.log 2>&1
-              echo "$1 -> exit $?" >> /tmp/class-results.txt
+              local status=$?
+              echo "$name -> exit $status" >> /tmp/class-results.txt
+              # Each Gradle run rewrites app/build/outputs/androidTest-results, so the
+              # per-class XML has to be archived before the next run wipes it.
+              mkdir -p "/tmp/results/$name"
+              cp -r app/build/outputs/androidTest-results/. "/tmp/results/$name/" 2>/dev/null || true
             }
             run_class io.pagwyn.reader.PdfDocumentTest
             run_class io.pagwyn.reader.ReaderInstrumentedTest
@@ -211,7 +218,9 @@ jobs:
           import glob, xml.etree.ElementTree as ET
           total = failures = skipped = 0
           rows = []
-          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+          paths = glob.glob('/tmp/results/**/*.xml', recursive=True) + \
+              glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+          for path in paths:
               try:
                   root = ET.parse(path).getroot()
               except Exception:
@@ -236,7 +245,9 @@ jobs:
           import glob, json, os, urllib.request, xml.etree.ElementTree as ET
           total = failures = skipped = 0
           rows = []
-          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+          paths = glob.glob('/tmp/results/**/*.xml', recursive=True) + \
+              glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+          for path in paths:
               try:
                   root = ET.parse(path).getroot()
               except Exception:
@@ -286,7 +297,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: instrumented-test-results
-          path: app/build/outputs/androidTest-results/**
+          path: |
+            /tmp/results/**
+            app/build/outputs/androidTest-results/**
           retention-days: 7
           if-no-files-found: ignore
 
