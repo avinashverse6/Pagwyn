@@ -140,6 +140,10 @@ class PdfDocument private constructor(
         runCatching { renderer.close() }
         runCatching { descriptor.close() }
         textService?.close()
+        // Delete the temporary copy made for text extraction, if one was needed.
+        textService?.let { service ->
+            runCatching { PdfDependencyLoader.releaseCopy(service.filePath) }
+        }
     }
 
     companion object {
@@ -184,10 +188,12 @@ class PdfDocument private constructor(
 
             // Text extraction is best effort. A failure here must never block opening:
             // reading a scanned PDF is still perfectly valid.
-            val textService = runCatching {
+            val fdPath = PdfTextService.descriptorPath(descriptor)
+            val textPath = runCatching {
                 PdfDependencyLoader.ensureLoaded(context)
-                PdfTextService(descriptor)
+                PdfDependencyLoader.resolveReadablePath(context, uri, fdPath)
             }.getOrNull()
+            val textService = runCatching { PdfTextService(descriptor, textPath) }.getOrNull()
 
             return PdfDocument(
                 source = source ?: DocumentResolver.resolve(context, uri),

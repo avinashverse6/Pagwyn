@@ -22,9 +22,14 @@ import java.nio.charset.StandardCharsets
  *  - Streaming: the file is read through a random access handle, never fully
  *    buffered in memory.
  */
-class PdfTextService(private val descriptor: ParcelFileDescriptor) : AutoCloseable {
+class PdfTextService(
+    descriptor: ParcelFileDescriptor,
+    /** Pre-resolved filesystem path, when the caller already worked one out. */
+    resolvedPath: String? = null,
+) : AutoCloseable {
 
-    private val filePath: String? = descriptorPath(descriptor)
+    /** Filesystem path the text engine reads from; null when the document is opaque. */
+    internal val filePath: String? = resolvedPath ?: descriptorPath(descriptor)
 
     /** Lazily built page index to text: parsing stops as soon as it is not needed. */
     private val parsed: ParsedDocument? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -79,7 +84,7 @@ class PdfTextService(private val descriptor: ParcelFileDescriptor) : AutoCloseab
         return prefix + text.substring(start, end).replace(Regex("\\s+"), " ").trim() + suffix
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "PagwynText"
         const val MAX_PAGES_SCANNED = 4000
         const val SNIPPET_RADIUS = 42

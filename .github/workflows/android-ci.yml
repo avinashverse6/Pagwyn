@@ -178,7 +178,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
           # The action replaces the whole `script` with one shell script, so logging
           # is done with a redirect rather than by chaining commands.
-          script: ./gradlew connectedDebugAndroidTest --stacktrace > /tmp/instrumented.log 2>&1; status=$?; tail -n 200 /tmp/instrumented.log; exit $status
+          # `--continue` lets every class run, so one crash cannot hide the rest of the
+          # results. Logcat is captured for crash diagnosis.
+          script: adb logcat -c; ./gradlew connectedDebugAndroidTest --stacktrace --continue > /tmp/instrumented.log 2>&1; status=$?; adb logcat -d -v brief > /tmp/logcat.txt 2>/dev/null; tail -n 200 /tmp/instrumented.log; exit $status
 
       - name: Post instrumented diagnostics on failure
         if: always() && steps.emulator.outcome != 'success'
@@ -186,6 +188,14 @@ jobs:
           {
             echo "### Instrumented tests did not pass (${{ steps.emulator.outcome }})"
             echo
+            echo "**Failing tests**"
+            echo '```'
+            grep -aE "^[a-z0-9_.]+ > .*FAILED" /tmp/instrumented.log | sed 's/\x1b\[[0-9;]*m//g' | head -n 30 || true
+            echo '```'
+            echo "**Crash / error logcat**"
+            echo '```'
+            grep -aE "FATAL EXCEPTION|AndroidRuntime|pagwyn|Caused by|ActivityManager: Force|INSTRUMENTATION" /tmp/logcat.txt 2>/dev/null | grep -av "^--------" | head -n 40 || echo "(no logcat captured)"
+            echo '```'
             echo "**Gradle failure lines**"
             echo '```'
             grep -nE "FAILURE:|What went wrong|Caused by:|No connected devices|error:|FAILED|Execution failed|Installation|not found|IOException" /tmp/instrumented.log 2>/dev/null | head -n 30 || echo "(no Gradle log: the emulator never started)"
