@@ -184,22 +184,25 @@ jobs:
           # The action runs this as one shell script. Only POSIX-sh built-ins are
           # used (no `local`, no bash-only syntax) because the shell is not bash.
           script: |
+            # This shell runs with `set -e`, so every command below has to be safe on
+            # its own and the exit status has to be captured immediately.
             : > /tmp/class-results.txt
             mkdir -p /tmp/results
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1
-            echo "PdfDocumentTest exit=$?" >> /tmp/class-results.txt
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1; PDF_STATUS=$?
+            echo "PdfDocumentTest exit=$PDF_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/PdfDocumentTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/PdfDocumentTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1
-            echo "ReaderInstrumentedTest exit=$?" >> /tmp/class-results.txt
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace >> /tmp/instrumented.log 2>&1; READER_STATUS=$?
+            echo "ReaderInstrumentedTest exit=$READER_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/ReaderInstrumentedTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/ReaderInstrumentedTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1
-            echo "HomeLibraryTest exit=$?" >> /tmp/class-results.txt
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace >> /tmp/instrumented.log 2>&1; HOME_STATUS=$?
+            echo "HomeLibraryTest exit=$HOME_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/HomeLibraryTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/HomeLibraryTest/ 2>/dev/null; true
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1
-            echo "SettingsPersistenceTest exit=$?" >> /tmp/class-results.txt
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace >> /tmp/instrumented.log 2>&1; SETTINGS_STATUS=$?
+            echo "SettingsPersistenceTest exit=$SETTINGS_STATUS" >> /tmp/class-results.txt
             mkdir -p /tmp/results/SettingsPersistenceTest; cp -r app/build/outputs/androidTest-results/. /tmp/results/SettingsPersistenceTest/ 2>/dev/null; true
             cat /tmp/class-results.txt
-            if grep -q "exit=[^0]" /tmp/class-results.txt; then exit 1; fi
+            if [ "$PDF_STATUS$READER_STATUS$HOME_STATUS$SETTINGS_STATUS" != "0000" ]; then exit 1; fi
+            exit 0
 
       - name: Post emulator run log
         if: always() && steps.emulator.outcome != 'skipped' && steps.emulator.outcome != ''

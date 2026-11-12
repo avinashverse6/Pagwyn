@@ -63,6 +63,17 @@ class PdfDocument private constructor(
     val renderer: PdfRenderer,
     /** Plain-text extraction service, may be unavailable for some documents. */
     private val textService: PdfTextService?,
+    /**
+     * Descriptor kept open for the text engine.
+     *
+     * `PdfRenderer` owns the rendering descriptor, and a descriptor number can be
+     * reused as soon as it is closed, so resolving `/proc/self/fd/<n>` for text would
+     * otherwise point at whichever document happened to take that number next. This
+     * descriptor stays open for the whole session, so the path stays correct.
+     */
+    private val textDescriptor: ParcelFileDescriptor?,
+    /** True when [PdfTextService] reads from a temporary cache copy. */
+    private val textPathIsCopy: Boolean,
 ) : AutoCloseable {
 
     val pageCount: Int = renderer.pageCount
@@ -148,10 +159,9 @@ class PdfDocument private constructor(
         runCatching { renderer.close() }
         runCatching { descriptor.close() }
         textService?.close()
+        runCatching { textDescriptor?.close() }
         // Delete the temporary copy made for text extraction, if one was needed.
-        textService?.let { service ->
-            runCatching { PdfDependencyLoader.releaseCopy(service.filePath) }
-        }
+        if (textPathIsCopy) runCatching { PdfDependencyLoader.releaseCopy(textService?.filePath) }
     }
 
     companion object {
@@ -172,14 +182,16 @@ class PdfDocument private constructor(
             val descriptor = openDescriptor(context, uri)
                 ?: throw PdfOpenException.NotFound()
 
-            // Work out where the raw bytes are readable *before* handing the descriptor
-            // to PdfRenderer. The renderer owns the descriptor, and once it is closed
-            // (or its number reused) /proc/self/fd no longer identifies this document.
-            val fdPath = PdfTextService.descriptorPath(descriptor)
+            // A second, independent descriptor whose only job is to keep the raw bytes
+            // readable for the text engine for as long as the document is open.
+            PdfDependencyLoader.ensureLoaded(context)
+            val textDescriptor = openDescriptor(context, uri)
+            val fdPath = textDescriptor?.let { PdfTextService.descriptorPath(it) }
             val textPath = runCatching {
-                PdfDependencyLoader.ensureLoaded(context)
                 PdfDependencyLoader.resolveReadablePath(context, uri, fdPath)
             }.getOrNull()
+            val textPathIsCopy = textPath != null && (fdPath == null || textPath != fdPath)
+            if (!textPathIsCopy) textDescriptor?.closeSafely()
 
             val renderer = try {
                 PdfRenderer(descriptor)
@@ -212,6 +224,8 @@ class PdfDocument private constructor(
                 descriptor = descriptor,
                 renderer = renderer,
                 textService = textService,
+                textDescriptor = if (textPathIsCopy) null else textDescriptor,
+                textPathIsCopy = textPathIsCopy,
             )
         }
 
