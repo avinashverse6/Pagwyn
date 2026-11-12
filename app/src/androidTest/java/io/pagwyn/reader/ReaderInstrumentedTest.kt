@@ -93,8 +93,11 @@ class ReaderInstrumentedTest {
             // The record is written on a background thread once the page count is known.
             waitUntil(10_000) { store.find(uri)?.pageCount == 2 }
             val document = store.find(uri)
-            assertNotNull("opened document must be recorded", document)
-            assertEquals(2, document!!.pageCount)
+            assertEquals(
+                "document should be recorded with its page count: $document",
+                2,
+                document?.pageCount,
+            )
             assertEquals(uri.toString(), settings.lastDocumentUri)
         }
     }

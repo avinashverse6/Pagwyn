@@ -184,8 +184,9 @@ jobs:
           # The action runs this as one shell script. Only POSIX-sh built-ins are
           # used (no `local`, no bash-only syntax) because the shell is not bash.
           script: |
-            # This shell runs with `set -e`, so every command below has to be safe on
-            # its own and the exit status has to be captured immediately.
+            # The emulator action runs this script with `set -e`, which would abort the
+            # run at the first failing class and hide the remaining results.
+            set +e
             : > /tmp/class-results.txt
             mkdir -p /tmp/results
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace >> /tmp/instrumented.log 2>&1
@@ -331,7 +332,7 @@ jobs:
                           if child.tag not in ('failure', 'error'):
                               continue
                           detail = ((child.text or '') + (child.get('message') or '')).strip().splitlines()
-                          lines += [f"`{case.get('name')}`: " + (detail[0][:300] if detail else "no message"), ""]
+                          lines += [f"`{case.get('name')}`:"] + [f"    {d.strip()[:220]}" for d in detail[:6]] + [""]
           body = json.dumps({"body": "\n".join(lines)})
           req = urllib.request.Request(
               f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
