@@ -46,14 +46,8 @@ class MetadataActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val stored = PagwynApplication.settings.theme
-        AppCompatDelegate.setDefaultNightMode(
-            when (stored) {
-                io.pagwyn.reader.data.AppTheme.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                io.pagwyn.reader.data.AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                io.pagwyn.reader.data.AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-            },
-        )
+        // One theme code path for the whole app (see ThemeApplier).
+        io.pagwyn.reader.ui.widget.ThemeApplier.applyStored(PagwynApplication.settings)
         setContentView(R.layout.activity_metadata)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->

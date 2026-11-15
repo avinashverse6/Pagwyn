@@ -60,11 +60,16 @@ class PageSlotView(context: Context) : FrameLayout(context) {
         visibility = View.GONE
     }
 
+    private val pad24 = context.dp(24f).toInt()
+    private val pad16 = context.dp(16f).toInt()
+    private val pad12 = context.dp(12f).toInt()
+    private val touchTarget = context.dp(48f).toInt()
+
     private val errorText: TextView = TextView(context).apply {
         gravity = Gravity.CENTER
         setTextColor(context.colorFromAttr(R.attr.pwOnSurfaceMuted))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        setPadding(dp(24f).toInt(), 0, dp(24f).toInt(), 0)
+        setPadding(pad24, 0, pad24, 0)
     }
 
     private val retryButton: TextView = TextView(context).apply {
@@ -75,8 +80,8 @@ class PageSlotView(context: Context) : FrameLayout(context) {
         isClickable = true
         isFocusable = true
         // Pill button with a 48dp touch target, per accessibility guidance.
-        minHeight = dp(48f).toInt()
-        setPadding(dp(24f).toInt(), dp(12f).toInt(), dp(24f).toInt(), dp(12f).toInt())
+        minHeight = touchTarget
+        setPadding(pad24, pad12, pad24, pad12)
         background = io.pagwyn.reader.ui.widget.pillBackground(
             context,
             context.colorFromAttr(R.attr.pwPrimary),
@@ -96,7 +101,7 @@ class PageSlotView(context: Context) : FrameLayout(context) {
         addView(
             retryButton,
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).also {
-                it.topMargin = dp(16f).toInt()
+                it.topMargin = pad16
                 it.gravity = Gravity.CENTER_HORIZONTAL
             },
         )

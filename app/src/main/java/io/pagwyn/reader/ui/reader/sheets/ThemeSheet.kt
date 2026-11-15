@@ -41,28 +41,34 @@ class ThemeSheet : PagwynSheet() {
             AppTheme.BLACK to R.string.theme_black,
         )
 
+        val context = requireContext()
+        val rowHeight = context.dp(52f).toInt()
+        val pad20 = context.dp(20f).toInt()
+        val gap8 = context.dp(8f).toInt()
+
         val labels = HashMap<AppTheme, TextView>()
         for ((option, labelRes) in options) {
-            val row = TextView(requireContext()).apply {
-                text = getString(labelRes)
+            val label = getString(labelRes)
+            val row = TextView(context).apply {
+                text = label
                 textSize = 16f
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                minHeight = dp(52f).toInt()
-                setPadding(dp(20f).toInt(), 0, dp(20f).toInt(), 0)
+                minHeight = rowHeight
+                setPadding(pad20, 0, pad20, 0)
                 isClickable = true
                 isFocusable = true
-                contentDescription = getString(labelRes)
+                contentDescription = label
             }
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).also { it.bottomMargin = dp(8f).toInt() }
+            ).also { it.bottomMargin = gap8 }
             rows.addView(row, params)
             labels[option] = row
             row.setOnClickListener { choose(option, labels) }
         }
 
-        style(rows, labels, PagwynApplication.settings.theme)
+        style(labels, PagwynApplication.settings.theme)
     }
 
     private fun choose(option: AppTheme, labels: Map<AppTheme, TextView>) {
@@ -70,24 +76,27 @@ class ThemeSheet : PagwynSheet() {
         if (settings.theme == option) return
         settings.theme = option
         ThemeApplier.apply(option)
-        style(labels.values.firstOrNull()?.parent as? LinearLayout ?: return, labels, option)
+        style(labels, option)
         onApplied?.invoke(option)
     }
 
     /** The selected option uses the accent fill; the rest stay on the raised surface. */
-    private fun style(rows: LinearLayout, labels: Map<AppTheme, TextView>, selected: AppTheme) {
-        val context = context ?: return
+    private fun style(labels: Map<AppTheme, TextView>, selected: AppTheme) {
+        val themeContext = requireContext()
         for ((option, row) in labels) {
             val isSelected = option == selected
             row.background = pillBackground(
-                context,
-                context.colorFromAttr(if (isSelected) R.attr.pwPrimary else R.attr.pwSurfaceSunken),
+                themeContext,
+                themeContext.colorFromAttr(
+                    if (isSelected) R.attr.pwPrimary else R.attr.pwSurfaceSunken,
+                ),
             )
             row.setTextColor(
-                context.colorFromAttr(if (isSelected) R.attr.pwOnPrimary else R.attr.pwOnSurface),
+                themeContext.colorFromAttr(
+                    if (isSelected) R.attr.pwOnPrimary else R.attr.pwOnSurface,
+                ),
             )
             row.isSelected = isSelected
         }
-        rows.tag = selected
     }
 }

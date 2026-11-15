@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -1113,7 +1114,14 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        binding.pageList.post { updateVisibleWindow() }
+        // A live theme change arrives as a uiMode configuration change (the manifest
+        // declares it), so the chrome is recoloured in place rather than by restarting
+        // the reader and losing the reading position.
+        applyAppThemeToChrome()
+        binding.pageList.post {
+            applyContentInsets()
+            updateVisibleWindow()
+        }
     }
 
     /**

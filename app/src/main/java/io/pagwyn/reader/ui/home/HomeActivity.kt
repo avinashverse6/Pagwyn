@@ -254,6 +254,11 @@ class HomeActivity : AppCompatActivity() {
         )
     }
 
+    /** Re-resolves every inflated view after the user picks a new theme. */
+    private fun applyThemeToRunningScreen() {
+        runCatching { recreate() }
+    }
+
     // ------------------------------------------------------------------ document opening
 
     private fun pickDocument() {
