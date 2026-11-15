@@ -51,8 +51,53 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # Output is captured so a failure is diagnosable even when the job log is
+      # unavailable; the report step below posts these files as a commit comment.
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --stacktrace 2>&1 | tee /tmp/unit-tests.log
+
+      - name: Post failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PYFAIL'
+          import json, os, urllib.request
+          parts = []
+          for label, path in (
+              ("unit test output", "/tmp/unit-tests.log"),
+          ):
+              try:
+                  text = open(path, errors="replace").read()
+              except OSError:
+                  continue
+              # Compiler errors and assertion failures only: full logs are huge.
+              keep = [
+                  line for line in text.splitlines()
+                  if line.startswith("e: ") or ": error:" in line
+                  or "FAILED" in line or line.startswith("> Task")
+                  or "Unresolved reference" in line or line.startswith("Caused by")
+              ]
+              if keep:
+                  parts.append(f"**{label}**\n```\n" + "\n".join(keep[:200]) + "\n```")
+          if not parts:
+              parts.append("_No diagnostics captured (the failure happened before the build). _")
+          body = json.dumps({"body": "### Build failure\n\n" + "\n\n".join(parts)})
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=body.encode(),
+              headers={
+                  "Authorization": f"token {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PYFAIL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
 
       - name: Lint
         run: ./gradlew lintDebug --stacktrace || true
