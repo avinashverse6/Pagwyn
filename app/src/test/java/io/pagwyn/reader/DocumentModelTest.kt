@@ -5,7 +5,6 @@ import io.pagwyn.reader.core.DocumentSource
 import io.pagwyn.reader.core.PagwynDocument
 import io.pagwyn.reader.data.AppTheme
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.ZoomMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -63,9 +62,8 @@ class DocumentModelTest {
         assertEquals(ReadingMode.CONTINUOUS, ReadingMode.from(99))
         assertEquals(ZoomMode.FIT_PAGE, ZoomMode.from(1))
         assertEquals(ZoomMode.FIT_WIDTH, ZoomMode.from(-3))
-        assertEquals(ReaderTheme.SEPIA, ReaderTheme.from(1))
-        assertEquals(ReaderTheme.FOLLOW_APP, ReaderTheme.from(42))
         assertEquals(AppTheme.DARK, AppTheme.from(2))
+        assertEquals(AppTheme.BLACK, AppTheme.from(3))
         assertEquals(AppTheme.SYSTEM, AppTheme.from(7))
     }
 
@@ -78,10 +76,12 @@ class DocumentModelTest {
         assertEquals(0, ZoomMode.FIT_WIDTH.storedValue)
         assertEquals(1, ZoomMode.FIT_PAGE.storedValue)
         assertEquals(2, ZoomMode.ACTUAL_SIZE.storedValue)
-        assertEquals(0, ReaderTheme.LIGHT.storedValue)
-        assertEquals(1, ReaderTheme.SEPIA.storedValue)
-        assertEquals(2, ReaderTheme.DARK.storedValue)
-        assertEquals(3, ReaderTheme.FOLLOW_APP.storedValue)
+        assertEquals(0, AppTheme.SYSTEM.storedValue)
+        assertEquals(1, AppTheme.LIGHT.storedValue)
+        assertEquals(2, AppTheme.DARK.storedValue)
+        // BLACK was added after the first release; its value must never be reused for
+        // a different theme, or existing users' stored choice would change meaning.
+        assertEquals(3, AppTheme.BLACK.storedValue)
     }
 
     @Test
