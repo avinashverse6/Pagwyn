@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Generated covers.
@@ -20,12 +21,16 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
+// Real Skia rasterisation. Robolectric's legacy graphics mode records draw calls
+// without painting pixels, so a shader-filled bitmap would read back as transparent
+// and the "the cover is actually painted" assertion would be meaningless.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CoverArtworkTest {
 
     @Test
     fun initialsUseTheFirstLettersOfUpToTwoWords() {
         assertEquals("DW", CoverArtwork.initialsFor("Deep Work.pdf"))
-        assertEquals("DF", CoverArtwork.initialsFor("deep-work_notes.pdf"))
+        assertEquals("DW", CoverArtwork.initialsFor("deep-work_notes.pdf"))
         assertEquals("P", CoverArtwork.initialsFor("Physics.pdf"))
         assertEquals("N", CoverArtwork.initialsFor("1984 notes.pdf").first().toString())
     }
