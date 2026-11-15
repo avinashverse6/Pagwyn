@@ -295,6 +295,7 @@ jobs:
               ("gradle test lines (API 24)", "/tmp/instrumented.log", 3000),
               ("result xml (API 34)", "/tmp/xml-dump34.txt", 5000),
               ("result xml (API 24)", "/tmp/xml-dump.txt", 5000),
+              ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 6000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
           ):
               try:
@@ -302,7 +303,7 @@ jobs:
               except OSError:
                   continue
               parts.append(f"**{label}**: {len(text)} chars")
-              if label == "crashes":
+              if label.startswith("crashes"):
                   keep = []
                   for line in text.splitlines():
                       stripped = line.strip()
