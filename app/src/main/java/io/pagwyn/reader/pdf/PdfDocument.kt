@@ -93,24 +93,37 @@ class PdfDocument private constructor(
     private val dimensions = HashMap<Int, PageInfo>(pageCount.coerceAtMost(MAX_DIMENSION_CACHE))
 
     /**
-     * Runs [block] with a fresh [PdfRenderer.Page]. The page is always closed so
-     * the native layer never runs out of page handles.
-     */
-    /**
      * Runs [block] with a page handle.
      *
-     * Pages are deliberately *not* closed after use. On Android 7 (API 24) the
-     * platform's `PdfRenderer.closePage` double-frees the pdfium page and aborts the
-     * process (SIGSEGV inside `CPDF_Page::~CPDF_Page`); the abort is random, so it
-     * looks like a rare crash in production. Page handles are owned by the renderer and
-     * freed when it closes, so keeping them alive costs one native object per page that
-     * is actually rendered, and correctness wins over that small cost.
+     * Two deliberate decisions, both forced by Android 7 (API 24) where the platform
+     * renderer aborts the process (SIGSEGV in pdfium, not a Java exception):
+     *
+     *  1. Handles are cached per page index instead of being opened on every render.
+     *     Repeated `openPage`/`closePage` pairs are what triggered
+     *     `CPDF_Page::Load` / `CPDF_Page::~CPDF_Page` crashes.
+     *  2. Handles are never closed individually — `closePage` double-frees on API 24.
+     *     They are released when the document (and therefore the renderer) closes.
+     *
+     * The cache is bounded, so a thousand-page document cannot accumulate handles: only
+     * pages that are actually displayed ever create one.
      */
     private inline fun <T> withPage(index: Int, block: (PdfRenderer.Page) -> T): T {
         check(!closed) { "Document is closed" }
-        return block(renderer.openPage(index))
+        return block(pageHandle(index))
     }
 
+    private val pageHandles = object : android.util.LruCache<Int, PdfRenderer.Page>(MAX_PAGE_HANDLES) {
+        override fun entryRemoved(evicted: Boolean, key: Int, old: PdfRenderer.Page, new: PdfRenderer.Page?) {
+            // Intentionally not closed: see the note on withPage.
+        }
+    }
+
+    private fun pageHandle(index: Int): PdfRenderer.Page {
+        pageHandles.get(index)?.let { return it }
+        val page = renderer.openPage(index)
+        pageHandles.put(index, page)
+        return page
+    }
 
     fun pageInfo(index: Int): PageInfo = synchronized(lock) {
         dimensions.getOrPut(index) {
@@ -189,6 +202,9 @@ class PdfDocument private constructor(
 
     companion object {
         private const val MAX_DIMENSION_CACHE = 2048
+
+        /** Native page handles kept per document (roughly one screenful). */
+        private const val MAX_PAGE_HANDLES = 8
 
         /**
          * Opens [uri] through the platform renderer.
