@@ -63,7 +63,22 @@ jobs:
         run: |
           python3 - <<'PYFAIL'
           import json, os, urllib.request
+          import glob, xml.etree.ElementTree as ET
           parts = []
+          # JUnit XML carries the assertion message, which the console log omits.
+          for xml_path in glob.glob("/home/runner/work/*/*/app/build/test-results/testDebugUnitTest/*.xml"):
+              try:
+                  tree = ET.parse(xml_path)
+              except Exception:
+                  continue
+              for case in tree.iter("testcase"):
+                  for failure in list(case.findall("failure")) + list(case.findall("error")):
+                      message = (failure.get("message") or "").strip()
+                      text = (failure.text or "").strip().splitlines()
+                      parts.append(
+                          f"**{case.get('classname','?')} > {case.get('name','?')}**\n"
+                          f"```\n{message}\n" + "\n".join(text[:12]) + "\n```"
+                      )
           for label, path in (
               ("unit test output", "/tmp/unit-tests.log"),
           ):
