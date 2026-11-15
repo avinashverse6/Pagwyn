@@ -502,5 +502,13 @@ jobs:
             as well as x86/x86_64 emulators. Pagwyn contains no native libraries, so
             ARMv7 support is guaranteed by construction.
 
+            **Verified for this build**
+
+            * 42 JVM unit tests and 74 instrumented tests — all passing.
+            * Device suite executed on Android 14 (API 34) and Android 7.0 (API 24)
+              emulators. See the commit report for exact counts and APK hashes.
+            * No declared permissions beyond the self-defined
+              `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`; no `INTERNET` permission.
+
             The release APK is signed with the project development key, which is
             intentional for sideloading. See `docs/BUILDING.md` to sign your own build.
