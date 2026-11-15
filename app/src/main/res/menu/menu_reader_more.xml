@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_bookmarks"
+        android:title="@string/reader_bookmarks" />
+    <item
+        android:id="@+id/action_goto_page"
+        android:title="@string/reader_go_to_page" />
+    <item
+        android:id="@+id/action_appearance"
+        android:title="@string/settings_reader_theme" />
+    <item
+        android:id="@+id/action_fullscreen"
+        android:title="@string/reader_fullscreen" />
+    <item
+        android:id="@+id/action_keep_screen_on"
+        android:title="@string/reader_keep_screen_on"
+        android:checkable="true" />
+    <item
+        android:id="@+id/action_copy_text"
+        android:title="@string/reader_copy_text" />
+    <item
+        android:id="@+id/action_share"
+        android:title="@string/reader_share" />
+    <item
+        android:id="@+id/action_info"
+        android:title="@string/reader_info" />
+</menu>

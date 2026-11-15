@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pagwyn backs up only its own preference file and document index.
+  PDF files themselves are never copied: they stay in the user's storage.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="pagwyn_prefs.xml" />
+    <include domain="database" path="pagwyn.db" />
+</full-backup-content>

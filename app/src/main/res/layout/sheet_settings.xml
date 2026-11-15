@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/pwSurface"
+    android:orientation="vertical">
+
+    <include layout="@layout/view_sheet_header" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/space_6">
+
+            <!-- Appearance -->
+            <TextView
+                style="@style/Text.Pagwyn.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_3"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_appearance" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_2"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_app_theme" />
+
+            <RadioGroup
+                android:id="@+id/themeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin">
+
+                <RadioButton
+                    android:id="@+id/themeSystem"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_theme_system" />
+
+                <RadioButton
+                    android:id="@+id/themeLight"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_theme_light" />
+
+                <RadioButton
+                    android:id="@+id/themeDark"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_theme_dark" />
+            </RadioGroup>
+
+            <TextView
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_3"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_reader_theme" />
+
+            <RadioGroup
+                android:id="@+id/readerThemeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin">
+
+                <RadioButton
+                    android:id="@+id/readerThemeFollow"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_reader_theme_follow" />
+
+                <RadioButton
+                    android:id="@+id/readerThemeLight"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/reader_theme_light" />
+
+                <RadioButton
+                    android:id="@+id/readerThemeSepia"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/reader_theme_sepia" />
+
+                <RadioButton
+                    android:id="@+id/readerThemeDark"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/reader_theme_dark" />
+            </RadioGroup>
+
+            <TextView
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_3"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_default_mode" />
+
+            <RadioGroup
+                android:id="@+id/modeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin">
+
+                <RadioButton
+                    android:id="@+id/modeContinuous"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/reader_mode_scroll" />
+
+                <RadioButton
+                    android:id="@+id/modeSingle"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/reader_mode_single" />
+            </RadioGroup>
+
+            <TextView
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_3"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_default_zoom" />
+
+            <RadioGroup
+                android:id="@+id/zoomGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin">
+
+                <RadioButton
+                    android:id="@+id/zoomFitWidth"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_default_zoom_fit_width" />
+
+                <RadioButton
+                    android:id="@+id/zoomFitPage"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_default_zoom_fit_page" />
+
+                <RadioButton
+                    android:id="@+id/zoomActual"
+                    style="@style/Text.Pagwyn.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="@string/settings_default_zoom_actual" />
+            </RadioGroup>
+
+            <!-- Reading behaviour -->
+            <TextView
+                style="@style/Text.Pagwyn.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_5"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_reading" />
+
+            <Switch
+                android:id="@+id/switchKeepScreenOn"
+                style="@style/Text.Pagwyn.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_keep_screen_on" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_keep_screen_on_desc"
+                android:textSize="12sp" />
+
+            <Switch
+                android:id="@+id/switchHideControls"
+                style="@style/Text.Pagwyn.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_hide_controls" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_hide_controls_desc"
+                android:textSize="12sp" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_2"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_page_spacing" />
+
+            <SeekBar
+                android:id="@+id/spacingSeek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_marginEnd="@dimen/space_4"
+                android:max="24"
+                android:progressTint="?attr/pwPrimary"
+                android:thumbTint="?attr/pwPrimary" />
+
+            <!-- Privacy -->
+            <TextView
+                style="@style/Text.Pagwyn.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_5"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_privacy" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shield"
+                    android:tint="?attr/pwPrimary" />
+
+                <TextView
+                    style="@style/Text.Pagwyn.Caption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_2"
+                    android:layout_weight="1"
+                    android:lineSpacingMultiplier="1.3"
+                    android:text="@string/settings_offline" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnClearHistory"
+                style="@style/Text.Pagwyn.Label"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/touch_target"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_clear_history"
+                android:textColor="?attr/pwDanger" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_clear_history_desc"
+                android:textSize="12sp" />
+
+            <!-- About -->
+            <TextView
+                style="@style/Text.Pagwyn.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_5"
+                android:paddingEnd="@dimen/screen_margin"
+                android:paddingBottom="@dimen/space_2"
+                android:text="@string/settings_about" />
+
+            <TextView
+                android:id="@+id/aboutVersion"
+                style="@style/Text.Pagwyn.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingEnd="@dimen/screen_margin" />
+
+            <TextView
+                style="@style/Text.Pagwyn.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/screen_margin"
+                android:paddingTop="@dimen/space_1"
+                android:paddingEnd="@dimen/screen_margin"
+                android:text="@string/settings_license" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
