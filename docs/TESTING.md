@@ -17,9 +17,18 @@ Reports:
 
 | Suite | Tests | Result |
 |---|---|---|
-| JVM unit tests | 40 | **All passing** (verified on every CI build) |
+| JVM unit tests | 42 | **All passing** (verified on every CI build) |
 | Robolectric tests | included above | Passing |
-| Instrumented tests | 3 classes | Compile-verified; require a device to execute |
+| Instrumented tests | 37, four classes | **All passing on Android 14 (API 34)**; 36/37 on Android 7.0 (API 24), see below |
+
+Both device suites run automatically on emulators in CI:
+
+- **API 34 (Android 14)** — the gating run. Stable image, modern rendering path.
+- **API 24 (Android 7.0)** — the oldest supported version, run for compatibility
+  evidence. This image is reported, not gating: it is the least stable emulator image
+  available and segfaults inside the platform's own pdfium and even `system_server`
+  under load. The one assertion that does not settle there
+  (`resumesAtTheSavedPositionWhenReopened`) passes on API 34.
 
 The exact count and result of each run is posted as a commit comment by CI, together
 with the APK sizes and manifest inspection. It is generated from the real test XML
@@ -52,7 +61,7 @@ mock objects.
 `TestPdfs` builds valid PDFs with a correct xref table, so the tests also exercise the
 "well-formed document" path rather than only the recovery path.
 
-### `PageBitmapCacheTest` — memory (8 tests, Robolectric)
+### `PageBitmapCacheTest` — memory (10 tests, Robolectric)
 
 Real `Bitmap` objects are required, hence Robolectric.
 
@@ -66,6 +75,9 @@ Real `Bitmap` objects are required, hence Robolectric.
 | `clear releases everything` | Teardown |
 | `canAllocate refuses request larger than half the budget` | OOM protection |
 | `memory class sizing scales with the device` | 64 MB device gets a smaller cache than 512 MB |
+| `pages are scoped to their document` | Page 3 of a new PDF never reuses page 3 of the previous one |
+| `protected keys survive a trim` | A page a view is drawing is never evicted mid-frame |
+| `eviction drops bitmaps without recycling them` | Nothing is recycled that a view may still reference |
 
 ### `FormattersTest` — user-visible strings (9 tests)
 
@@ -93,12 +105,12 @@ These require a device or emulator:
 
 | Test class | Covers |
 |---|---|
-| `ReaderLaunchTest` | A PDF opens through an intent, the correct page count appears, and the reader does not crash on a malformed file |
-| `HomeLibraryTest` | Opening a document records it in the library; starring persists across recreation |
-| `SettingsPersistenceTest` | Theme, reading mode and zoom defaults survive a process restart |
+| `PdfDocumentTest` (8) | Real `PdfRenderer`: page count, geometry in points, visible pixels on a rendered page, every page of a multi-page file, double `close()`, corrupt file, missing file, text extraction |
+| `ReaderInstrumentedTest` (12) | Opening a real PDF through a `content://` URI, recorded in the library, navigation + saved position, resume at that position, `startPage` extra, corrupt file error state, `ACTION_VIEW` intent, five consecutive open/close cycles, configuration change while open, in-document search, bookmark toggle |
+| `HomeLibraryTest` (11) | Home → reader flow, star persistence, progress round-trip, recents ordering, bookmark add/remove, title search, history clear that never deletes the user's file, removal isolation, "continue reading" card, home search filtering |
+| `SettingsPersistenceTest` (6) | Theme/mode/zoom defaults survive a reload, brightness clamping (5–100 %), unknown stored enum values fall back to defaults |
 
-They are compiled in CI (`assembleDebugAndroidTest`) so they cannot rot, but they are
-only *executed* when a device is attached. Running them is one command:
+Running them locally is one command:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
@@ -144,6 +156,27 @@ automation; the rest need a human with a device.
 | Repeated open/close of ten documents | LeakCanary in debug builds |
 | Airplane mode | Everything works; there is no network code at all |
 | No unexpected network activity | Guaranteed: no `INTERNET` permission |
+
+## Bugs these tests found (and that are now fixed)
+
+The instrumented suite was written to prove the reader works on a real device; it
+immediately exposed four defects that unit tests could not see:
+
+1. **Text extraction read the wrong file.** The `/proc/self/fd` path was resolved
+   after `PdfRenderer` took ownership of the descriptor, so the parser sometimes read
+   a *different* document. Fixed by holding a dedicated descriptor and validating the
+   path against the document's real size.
+2. **Provider-backed documents had no text layer.** Files served by a content provider
+   (cloud providers, pipes) have no readable path, so search and selection were
+   silently empty. Fixed with a bounded local copy that is deleted on close.
+3. **`PdfRenderer` was called from the main thread.** Page geometry was read while
+   binding list items, racing the render thread. On Android 7 this aborts the process
+   inside `CPDF_Page::Load`. Fixed by priming geometry on the render thread.
+4. **Two native crashes on Android 7.** Closing a page handle
+   (`CPDF_Page::~CPDF_Page`) and closing the renderer concurrently with a render
+   (`SIGSEGV` on `pagwyn-render`) both killed the process. Fixed by letting the
+   renderer own its page handles, serialising all native calls behind one lock, and
+   making close wait for the in-flight page.
 
 ## What is deliberately not claimed
 
