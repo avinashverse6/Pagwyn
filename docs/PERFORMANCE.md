@@ -15,7 +15,7 @@ itself. The numbers below come from that inspection, not from estimates.
 
 | Artifact | Size | Contents |
 |---|---|---|
-| `pagwyn-release.apk` (minified + resource shrunk) | **~1.02 MB** (1,067,585 bytes) | The shippable build |
+| `pagwyn-release.apk` (minified + resource shrunk) | **~1.02 MB** (1,069,489 bytes) | The shippable build |
 | `pagwyn-debug.apk` (unminified, includes LeakCanary) | ~5.0 MB (5,044,545 bytes) | Development only |
 
 This lands at the low end of the 2–5 MB target — smaller, because Pagwyn ships no
@@ -47,8 +47,10 @@ launchable-activity: name='io.pagwyn.reader.ui.home.HomeActivity'
 uses-permission: name='io.pagwyn.reader.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
 ```
 
-`minSdkVersion` is 24 (Android 7.0) and appears in `aapt2 dump badging` as
-`sdkVersion:'24'`.
+`minSdkVersion` is 24 (Android 7.0). `aapt2 dump badging` on this AGP version prints
+only `targetSdkVersion:'35'` — the minimum is verifiable with
+`aapt2 dump xmltree --file AndroidManifest.xml pagwyn-release.apk | grep minSdkVersion`,
+which shows `minSdkVersion=24`.
 
 The single `uses-permission` entry is a *self-defined signature permission* that the
 AndroidX Core library adds automatically to protect dynamically registered broadcast

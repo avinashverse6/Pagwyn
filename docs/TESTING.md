@@ -19,16 +19,15 @@ Reports:
 |---|---|---|
 | JVM unit tests | 42 | **All passing** (verified on every CI build) |
 | Robolectric tests | included above | Passing |
-| Instrumented tests | 37, four classes | **All passing on Android 14 (API 34)**; 36/37 on Android 7.0 (API 24), see below |
+| Instrumented tests | 37, four classes | **All 37 passing on both Android 14 (API 34) and Android 7.0 (API 24)** |
 
-Both device suites run automatically on emulators in CI:
+Both device suites run automatically on emulators in CI, 74 device tests per build:
 
-- **API 34 (Android 14)** — the gating run. Stable image, modern rendering path.
-- **API 24 (Android 7.0)** — the oldest supported version, run for compatibility
-  evidence. This image is reported, not gating: it is the least stable emulator image
-  available and segfaults inside the platform's own pdfium and even `system_server`
-  under load. The one assertion that does not settle there
-  (`resumesAtTheSavedPositionWhenReopened`) passes on API 34.
+- **API 34 (Android 14)** — the gating run. Stable image, modern rendering path
+  (hardware accelerated rendering, scoped storage, predictive back).
+- **API 24 (Android 7.0)** — the oldest supported version, same suite. It is reported
+  separately because that image is the least stable one available, so its failures are
+  triaged rather than assumed to be product bugs. The suite passes on it.
 
 The exact count and result of each run is posted as a commit comment by CI, together
 with the APK sizes and manifest inspection. It is generated from the real test XML
@@ -172,11 +171,18 @@ immediately exposed four defects that unit tests could not see:
 3. **`PdfRenderer` was called from the main thread.** Page geometry was read while
    binding list items, racing the render thread. On Android 7 this aborts the process
    inside `CPDF_Page::Load`. Fixed by priming geometry on the render thread.
-4. **Two native crashes on Android 7.** Closing a page handle
-   (`CPDF_Page::~CPDF_Page`) and closing the renderer concurrently with a render
-   (`SIGSEGV` on `pagwyn-render`) both killed the process. Fixed by letting the
-   renderer own its page handles, serialising all native calls behind one lock, and
-   making close wait for the in-flight page.
+4. **Native crashes on Android 7.** Several distinct process-killing bugs surfaced on
+   API 24 only, all inside the platform's pdfium:
+   - closing a page handle double-frees the native page (`CPDF_Page::~CPDF_Page`);
+   - closing the renderer while a page was rendering aborts on the render thread;
+   - reopening and closing a page repeatedly aborts inside `CPDF_Page::Load`;
+   - `PdfRenderer.close()` leaves a dangling pointer that the finalizer frees again,
+     killing the app seconds later in the `FinalizerDaemon`.
+
+   Fixed by letting the renderer own its page handles (bounded cache), serialising
+   every native call behind one lock, making close wait for the in-flight page, and
+   pinning closed renderers on that platform. The full device suite passes on Android 7
+   after these fixes.
 
 ## What is deliberately not claimed
 
