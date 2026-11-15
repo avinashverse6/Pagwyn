@@ -478,6 +478,9 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
                 for (page in intArrayOf(focus + offset, focus - offset)) {
                     if (page < 0 || page >= pageCount) continue
                     val info = viewModel.pageInfoAsync(page) ?: continue
+                    // Cache it on the ViewModel so list binding never calls PdfRenderer
+                    // (which is not thread-safe and aborts inside pdfium if it is).
+                    viewModel.putPageInfo(info)
                     continuousAdapter.setAspect(page, info.aspectRatio)
                 }
             }

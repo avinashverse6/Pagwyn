@@ -96,9 +96,21 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
 
-            val result = runCatching { renderer.open(uri, password, resolved) }
+            val result = runCatching {
+                val pdf = renderer.open(uri, password, resolved)
+                // Prime page geometry on the render thread. `PdfRenderer` is not
+                // thread-safe, so the main thread must never ask it for sizes.
+                val geometry = HashMap<Int, PageInfo>(minOf(pdf.pageCount, GEOMETRY_PRIME_PAGES))
+                for (index in 0 until minOf(pdf.pageCount, GEOMETRY_PRIME_PAGES)) {
+                    runCatching { pdf.pageInfo(index) }.getOrNull()?.let { geometry[index] = it }
+                }
+                pdf to geometry
+            }
             result.fold(
-                onSuccess = { pdf -> onDocumentOpened(pdf, resolved, resume) },
+                onSuccess = { (pdf, geometry) ->
+                    pageGeometry.putAll(geometry)
+                    onDocumentOpened(pdf, resolved, resume)
+                },
                 onFailure = { throwable -> handleOpenFailure(throwable) },
             )
         }
@@ -313,7 +325,22 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         _state.update { it.copy(fullscreen = fullscreen) }
     }
 
-    fun pageInfo(index: Int): PageInfo? = document?.let { runCatching { it.pageInfo(index) }.getOrNull() }
+    /**
+     * Cached page geometry for the main thread.
+     *
+     * Never calls into `PdfRenderer`: it is not thread-safe, and asking it for a page
+     * size from the main thread while the render thread is rendering aborts the process
+     * inside pdfium on Android 7. Unknown pages return null and are fetched
+     * asynchronously by [pageInfoAsync].
+     */
+    fun pageInfo(index: Int): PageInfo? = pageGeometry[index]
+
+    /** Registers geometry obtained on the render thread. */
+    fun putPageInfo(info: PageInfo) {
+        pageGeometry[info.index] = info
+    }
+
+    private val pageGeometry = HashMap<Int, PageInfo>()
 
     fun rememberSharpWidth(widthPx: Int) {
         sharpWidthPx = widthPx
