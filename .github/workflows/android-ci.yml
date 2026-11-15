@@ -295,10 +295,10 @@ jobs:
             cat /tmp/pagwyn-results-34/pdf-crash.txt /tmp/pagwyn-results-34/reader-crash.txt /tmp/pagwyn-results-34/home-crash.txt /tmp/pagwyn-results-34/settings-crash.txt > /tmp/pagwyn-results-34/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results-34 -maxdepth 6 -name '*.*' | head -n 40
             if [ -e /tmp/pagwyn-results-34/pdf.fail ] || [ -e /tmp/pagwyn-results-34/reader.fail ] || [ -e /tmp/pagwyn-results-34/home.fail ] || [ -e /tmp/pagwyn-results-34/settings.fail ]; then
-              echo "API34_RESULT=failure"
+              echo "API34_RESULT=failure" | tee /tmp/emulator34-tail.txt
               exit 1
             fi
-            echo "API34_RESULT=success"
+            echo "API34_RESULT=success" | tee /tmp/emulator34-tail.txt
 
       # The API 24 (Android 7.0) image is used deliberately: it is the oldest supported
       # version, so it exercises the strictest platform behaviour. It is also the least
@@ -390,6 +390,8 @@ jobs:
           for label, path, limit in (
               ("gradle test lines (API 24)", "/tmp/instrumented.log", 3000),
               ("gradle test lines (API 34)", "/tmp/instrumented34.log", 3000),
+              # Whatever the emulator script printed last, including its verdict line.
+              ("emulator tail (API 34)", "/tmp/emulator34-tail.txt", 3000),
               ("test failures (API 34)", "/tmp/failures34.txt", 5000),
               ("test failures (API 24)", "/tmp/failures.txt", 5000),
               ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 6000),
