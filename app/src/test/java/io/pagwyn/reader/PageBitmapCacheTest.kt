@@ -35,6 +35,32 @@ class PageBitmapCacheTest {
     }
 
     @Test
+    fun `pages are scoped to their document`() {
+        // Regression: page 3 of one PDF must never be served for page 3 of another.
+        val cache = PageBitmapCache(8 * 1024 * 1024)
+        val first = bitmap()
+        cache.put(PageBitmapCache.Key(3, 100, 0, "content://docs/first.pdf"), first)
+
+        assertNull(cache.get(PageBitmapCache.Key(3, 100, 0, "content://docs/second.pdf")))
+        assertEquals(first, cache.get(PageBitmapCache.Key(3, 100, 0, "content://docs/first.pdf")))
+    }
+
+    @Test
+    fun `protected keys survive a trim`() {
+        val cache = PageBitmapCache(8 * 1024 * 1024)
+        val onScreen = bitmap()
+        cache.put(PageBitmapCache.Key(0, 64, 0), onScreen)
+        val far = bitmap()
+        cache.put(PageBitmapCache.Key(9, 64, 0), far)
+
+        cache.evictRemote(0, 1, protect = setOf(PageBitmapCache.Key(9, 64, 0)))
+
+        // A page far from the viewport is normally dropped, but never while a view draws it.
+        assertEquals(far, cache.get(PageBitmapCache.Key(9, 64, 0)))
+        assertNull(cache.get(PageBitmapCache.Key(9, 64, 0, "other-document")))
+    }
+
+    @Test
     fun `different zoom levels are separate entries`() {
         val cache = PageBitmapCache(16 * 1024 * 1024)
         val small = bitmap(16, 16)

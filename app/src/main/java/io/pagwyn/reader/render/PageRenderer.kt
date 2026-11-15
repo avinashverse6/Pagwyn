@@ -85,6 +85,14 @@ class PageRenderer(
     @Volatile
     private var protectedKeys: Set<PageBitmapCache.Key> = emptySet()
 
+    /** Builds a cache key for the open document. */
+    private fun key(page: Int, widthPx: Int, rotation: Int): PageBitmapCache.Key =
+        PageBitmapCache.Key(page, widthPx, rotation, documentKey)
+
+    /** Identity of the open document; part of every cache key. */
+    @Volatile
+    private var documentKey: String = ""
+
     val pageCount: Int get() = document?.pageCount ?: 0
 
     val isOpen: Boolean get() = document != null
@@ -103,6 +111,7 @@ class PageRenderer(
         closeInternal()
         val opened = PdfDocument.open(context, uri, password, source)
         document = opened
+        documentKey = uri.toString()
         opened
     }
 
@@ -117,17 +126,20 @@ class PageRenderer(
     suspend fun tryOpen(uri: Uri, password: String?): Result<PdfDocument> = withContext(dispatcher) {
         runCatching {
             closeInternal()
-            PdfDocument.open(context, uri, password).also { document = it }
+            PdfDocument.open(context, uri, password).also {
+                document = it
+                documentKey = uri.toString()
+            }
         }
     }
 
     /** Cached bitmap for an exact key, if present. Never blocks. */
     fun cached(page: Int, widthPx: Int, rotation: Int): Bitmap? =
-        cache.get(Key(page, widthPx, rotation))
+        cache.get(key(page, widthPx, rotation))
 
     /** Any cached bitmap for the page, used to paint instantly while a sharp pass runs. */
     fun cachedAny(page: Int): Bitmap? {
-        val keys = cache.retainedKeys().filter { it.page == page }
+        val keys = cache.retainedKeys().filter { it.page == page && it.document == documentKey }
         return keys.maxByOrNull { it.widthPx }?.let { cache.get(it) }
     }
 
@@ -162,7 +174,7 @@ class PageRenderer(
         scope.launch {
             for (page in pages) {
                 if (gen != generation) return@launch
-                if (cache.get(Key(page, widthPx, rotation)) != null) continue
+                if (cache.get(key(page, widthPx, rotation)) != null) continue
                 renderPreview(page, widthPx, rotation, gen)
             }
         }
@@ -179,7 +191,7 @@ class PageRenderer(
         for (page in desiredOrder) {
             if (gen != generation) return
             if (page !in 0 until doc.pageCount) continue
-            if (cache.get(Key(page, width, rotation)) != null) {
+            if (cache.get(key(page, width, rotation)) != null) {
                 deliverCached(page, width, rotation)
                 continue
             }
@@ -195,7 +207,7 @@ class PageRenderer(
     }
 
     private fun deliverCached(page: Int, width: Int, rotation: Int) {
-        val bitmap = cache.get(Key(page, width, rotation)) ?: return
+        val bitmap = cache.get(key(page, width, rotation)) ?: return
         mainHandler.post {
             if (!bitmap.isRecycled) listener?.onPageRendered(page, bitmap, true)
         }
@@ -205,9 +217,9 @@ class PageRenderer(
         val doc = document ?: return
         val targetWidth = minOf(width, PREVIEW_MAX_WIDTH).coerceAtLeast(PREVIEW_MIN_WIDTH)
         val info = runCatching { doc.pageInfo(page) }.getOrNull() ?: return
-        val key = Key(page, width, rotation)
+        val key = key(page, width, rotation)
         if (cache.get(key) != null) return
-        val previewKey = Key(page, targetWidth, rotation)
+        val previewKey = key(page, targetWidth, rotation)
         if (cache.get(previewKey) != null) {
             cache.get(previewKey)?.let { bitmap ->
                 mainHandler.post { if (!bitmap.isRecycled) listener?.onPageRendered(page, bitmap, false) }
@@ -234,7 +246,7 @@ class PageRenderer(
 
     private fun renderSharp(page: Int, width: Int, rotation: Int, gen: Int) {
         val doc = document ?: return
-        val key = Key(page, width, rotation)
+        val key = key(page, width, rotation)
         if (cache.get(key) != null) {
             deliverCached(page, width, rotation)
             return
@@ -347,7 +359,7 @@ class PageRenderer(
 
     /** Every cache key currently held for [page], at any render width or rotation. */
     fun cachedKeysFor(page: Int): Set<PageBitmapCache.Key> =
-        cache.retainedKeys().filterTo(HashSet()) { it.page == page }
+        cache.retainedKeys().filterTo(HashSet()) { it.page == page && it.document == documentKey }
 
     /** Registers the keys the reader currently has bound to views. */
     fun setProtectedKeys(keys: Set<PageBitmapCache.Key>) {
@@ -357,6 +369,7 @@ class PageRenderer(
     private fun closeInternal() {
         document?.let { runCatching { it.close() } }
         document = null
+        documentKey = ""
         cache.clear()
     }
 

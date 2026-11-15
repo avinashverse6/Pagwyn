@@ -20,8 +20,19 @@ import java.util.LinkedHashMap
  */
 class PageBitmapCache(budgetBytes: Int) {
 
-    /** Identifies a rendered page: page number + quantised render width. */
-    data class Key(val page: Int, val widthPx: Int, val rotation: Int)
+    /**
+     * Identifies a rendered page.
+     *
+     * The document key matters: without it, a bitmap rendered for page 3 of one PDF
+     * would be handed to page 3 of the next PDF opened in the same process, showing the
+     * wrong content (and, when recycled, crashing the canvas).
+     */
+    data class Key(
+        val page: Int,
+        val widthPx: Int,
+        val rotation: Int,
+        val document: String = "",
+    )
 
     private class Entry(val bitmap: Bitmap, val bytes: Int) {
         var lastUsed: Long = System.nanoTime()
