@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Theme picker. The option rows are created in code so their pill shapes and tints
+  always follow the theme being previewed (a row cannot reference the attributes of
+  the theme it is switching to).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/pwSurface"
+    android:orientation="vertical">
+
+    <include layout="@layout/view_sheet_header" />
+
+    <TextView
+        android:id="@+id/sheetSubtitle"
+        style="@style/Text.Pagwyn.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_5"
+        android:lineSpacingMultiplier="1.3" />
+
+    <LinearLayout
+        android:id="@+id/themeRows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_6" />
+</LinearLayout>

@@ -44,10 +44,35 @@ class ContinuousReaderAdapter(
     /** Supplied by the reader to repaint a slot from the shared cache. */
     var bitmapLookup: ((Int) -> Bitmap?)? = null
 
+    /**
+     * Pages that failed to render, so a rebind restores the error state instead of
+     * resetting the slot to "Rendering…" and starting the spinner over.
+     */
+    private val failedPages = HashSet<Int>()
+
+    fun markFailed(page: Int) {
+        if (failedPages.add(page) && page in 0 until itemCount) {
+            notifyItemChanged(page, PAYLOAD_FAILED)
+        }
+    }
+
+    fun clearFailed(page: Int) {
+        if (failedPages.remove(page) && page in 0 until itemCount) {
+            notifyItemChanged(page, PAYLOAD_FAILED)
+        }
+    }
+
+    fun clearAllFailures() {
+        if (failedPages.isEmpty()) return
+        failedPages.clear()
+        notifyDataSetChanged()
+    }
+
     fun submit(pages: Int, initialInfo: (Int) -> PageInfo?) {
         pageCount = pages
         aspects.clear()
         boundBitmaps.clear()
+        failedPages.clear()
         val prime = minOf(pages, PRIME_LIMIT)
         for (i in 0 until prime) {
             initialInfo(i)?.let { aspects.put(i, it.aspectRatio) }
@@ -124,6 +149,8 @@ class ContinuousReaderAdapter(
         val existing = boundBitmaps[position] ?: bitmapLookup?.invoke(position)
         if (existing != null && !existing.isRecycled) {
             slot.setBitmap(existing, sharp = false)
+        } else if (position in failedPages) {
+            slot.showError()
         } else {
             slot.setBitmap(null, sharp = false)
         }
@@ -143,6 +170,9 @@ class ContinuousReaderAdapter(
                     if (bitmap != null && !bitmap.isRecycled) holder.slot.setBitmap(bitmap, sharp = false)
                 }
                 PAYLOAD_GAP -> holder.slot.setPageGap(pageGapPx)
+                PAYLOAD_FAILED -> {
+                    if (position in failedPages) holder.slot.showError() else holder.slot.showLoading()
+                }
             }
         }
     }
@@ -160,6 +190,7 @@ class ContinuousReaderAdapter(
     private companion object {
         const val PAYLOAD_GEOMETRY = "geometry"
         const val PAYLOAD_GAP = "gap"
+        const val PAYLOAD_FAILED = "failed"
         const val PRIME_LIMIT = 300
         const val DEFAULT_ASPECT = 0.707f
     }

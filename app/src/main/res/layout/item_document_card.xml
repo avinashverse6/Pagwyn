@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One library card in the two-column grid: generated cover, title, progress.
+  Press feedback is a scale animation applied by the adapter (no ripple on the card
+  body, which would fight the rounded corners on older APIs).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:padding="@dimen/space_3">
+
+    <ImageView
+        android:id="@+id/cardCover"
+        android:layout_width="match_parent"
+        android:layout_height="104dp"
+        android:contentDescription="@null"
+        android:scaleType="fitXY" />
+
+    <TextView
+        android:id="@+id/cardTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_3"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="2"
+        android:minLines="1"
+        android:textColor="?attr/pwOnSurface"
+        android:textSize="14sp"
+        tools:text="Deep Work" />
+
+    <TextView
+        android:id="@+id/cardMeta"
+        style="@style/Text.Pagwyn.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="12sp"
+        tools:text="Page 42 of 380" />
+
+    <ProgressBar
+        android:id="@+id/cardProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="@dimen/space_2"
+        android:max="1000"
+        android:progressDrawable="@drawable/bg_progress_track" />
+
+    <ImageButton
+        android:id="@+id/cardStar"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="end"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/action_star"
+        android:padding="10dp"
+        android:src="@drawable/ic_star" />
+</LinearLayout>

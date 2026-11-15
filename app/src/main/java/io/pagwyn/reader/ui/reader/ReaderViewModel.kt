@@ -10,7 +10,6 @@ import io.pagwyn.reader.core.DocumentResolver
 import io.pagwyn.reader.core.DocumentSource
 import io.pagwyn.reader.core.Formatters
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.ZoomMode
 import io.pagwyn.reader.pdf.PageInfo
 import io.pagwyn.reader.pdf.PdfDocument
@@ -46,7 +45,6 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         ReaderState(
             mode = settings.defaultMode,
             zoomMode = settings.defaultZoom,
-            theme = settings.readerTheme,
         ),
     )
     val state: StateFlow<ReaderState> = _state.asStateFlow()
@@ -290,26 +288,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         _state.update { it.copy(zoomPercent = percent) }
     }
 
-    /** Renders a small page bitmap for the thumbnail grid. */
-    suspend fun renderThumbnail(page: Int, widthPx: Int = THUMBNAIL_WIDTH): Bitmap? =
-        renderer.renderThumbnail(page, widthPx)
-
     fun bookmarks(): List<Int> = bookmarkedPages.sorted()
-
-    fun setTheme(theme: ReaderTheme) {
-        settings.readerTheme = theme
-        _state.update { it.copy(theme = theme) }
-    }
-
-    fun toggleTheme() {
-        val next = when (_state.value.theme) {
-            ReaderTheme.LIGHT -> ReaderTheme.SEPIA
-            ReaderTheme.SEPIA -> ReaderTheme.DARK
-            ReaderTheme.DARK -> ReaderTheme.LIGHT
-            ReaderTheme.FOLLOW_APP -> ReaderTheme.SEPIA
-        }
-        setTheme(next)
-    }
 
     fun setMode(mode: ReadingMode) {
         if (_state.value.mode == mode) return
@@ -404,6 +383,27 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         renderer.setViewport(visiblePages, widthPx, rotation)
     }
 
+    /**
+     * Drops one page from the cache and asks for it again.
+     *
+     * Used by the "Retry" button on a page that failed to render. The cached entry
+     * must go first: otherwise [lastRequested] equals the request and the renderer
+     * would treat it as a no-op.
+     */
+    fun retryPage(page: Int, widthPx: Int) {
+        runCatching { pageCache.evictPage(page) }
+        val width = if (widthPx > 0) widthPx else lastRequestedWidth
+        if (width <= 0) return
+        renderer.setViewport(listOf(page), width, _state.value.rotation)
+    }
+
+    private var lastRequestedWidth = 0
+
+    /** Remembers the last render width so a retry can reuse it. */
+    fun rememberRenderWidth(widthPx: Int) {
+        if (widthPx > 0) lastRequestedWidth = widthPx
+    }
+
     suspend fun pageInfoAsync(index: Int): PageInfo? = renderer.pageInfo(index)
 
     suspend fun docPageInfo(index: Int): PageInfo? = renderer.pageInfo(index)
@@ -443,6 +443,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         renderer.listener = listener
     }
 
+
     fun setStarred(starred: Boolean) {
         val uri = document?.source?.uri ?: return
         viewModelScope.launch(Dispatchers.IO) { documents.setStarred(uri, starred) }
@@ -469,6 +470,5 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         const val GEOMETRY_PRIME_PAGES = 24
 
         const val SEARCH_LIMIT = 200
-        const val THUMBNAIL_WIDTH = 180
     }
 }

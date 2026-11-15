@@ -31,11 +31,12 @@ sealed class PdfOpenException(message: String, cause: Throwable? = null) : Excep
 /**
  * Keeps closed `PdfRenderer` instances reachable on Android 7.
  *
- * `PdfRenderer.close()` on API 24 frees the native document but leaves the pointer in
- * the Java object, and the object's finalizer then frees it a second time. The result is
- * a `SIGSEGV` in the `FinalizerDaemon` inside `CPDF_Document::~CPDF_Document`, which
- * kills the app some seconds after a document is closed. Holding a reference to the
- * (now tiny, already-closed) object stops the finalizer from ever running.
+ * On API 24 `PdfRenderer.doClose()` calls `nativeClose(mNativeDocument)` but never
+ * clears `mNativeDocument`, and `finalize()` calls `doClose()` again whenever the
+ * object is collected. The native document is therefore freed twice: a `SIGSEGV` in
+ * the `FinalizerDaemon` inside `CPDF_Parser::~CPDF_Parser` /
+ * `CPDF_Document::~CPDF_Document`, killing the app seconds after a document closes.
+ * Holding a reference to the (now inert) object means the finalizer never runs.
  *
  * The list is capped, so this cannot grow without bound; the retained objects hold no
  * native memory of their own once closed.
@@ -119,36 +120,29 @@ class PdfDocument private constructor(
     private val dimensions = HashMap<Int, PageInfo>(pageCount.coerceAtMost(MAX_DIMENSION_CACHE))
 
     /**
-     * Runs [block] with a page handle.
+     * Runs [block] with the document's single open page, then closes it.
      *
-     * Two deliberate decisions, both forced by Android 7 (API 24) where the platform
-     * renderer aborts the process (SIGSEGV in pdfium, not a Java exception):
+     * `PdfRenderer` allows **exactly one page to be open at a time**: `openPage`
+     * throws `IllegalStateException("Current page not closed")` otherwise, and
+     * `PdfRenderer.close()` requires the current page to be closed first. Keeping
+     * several handles alive (an earlier attempt to dodge an Android 7 crash) broke
+     * every page except the first: each `openPage` threw, `renderPage` swallowed the
+     * exception and returned false, and the reader showed "Rendering page…" forever.
      *
-     *  1. Handles are cached per page index instead of being opened on every render.
-     *     Repeated `openPage`/`closePage` pairs are what triggered
-     *     `CPDF_Page::Load` / `CPDF_Page::~CPDF_Page` crashes.
-     *  2. Handles are never closed individually — `closePage` double-frees on API 24.
-     *     They are released when the document (and therefore the renderer) closes.
-     *
-     * The cache is bounded, so a thousand-page document cannot accumulate handles: only
-     * pages that are actually displayed ever create one.
+     * So the handle is opened and closed inside this call, under [lock], and never
+     * stored. That is the platform's own contract.
      */
     private inline fun <T> withPage(index: Int, block: (PdfRenderer.Page) -> T): T {
         check(!closed) { "Document is closed" }
-        return block(pageHandle(index))
-    }
-
-    private val pageHandles = object : android.util.LruCache<Int, PdfRenderer.Page>(MAX_PAGE_HANDLES) {
-        override fun entryRemoved(evicted: Boolean, key: Int, old: PdfRenderer.Page, new: PdfRenderer.Page?) {
-            // Intentionally not closed: see the note on withPage.
-        }
-    }
-
-    private fun pageHandle(index: Int): PdfRenderer.Page {
-        pageHandles.get(index)?.let { return it }
         val page = renderer.openPage(index)
-        pageHandles.put(index, page)
-        return page
+        try {
+            return block(page)
+        } finally {
+            // Closed in `finally` so a throwing render can never leave the renderer
+            // wedged with a page stuck open. `Page.close()` is idempotent-safe on
+            // every API level (it checks its own native handle first).
+            runCatching { page.close() }
+        }
     }
 
     fun pageInfo(index: Int): PageInfo = synchronized(lock) {
@@ -188,13 +182,32 @@ class PdfDocument private constructor(
             }
             true
         } catch (e: IllegalArgumentException) {
+            // Malformed page or a bitmap size the renderer rejects.
+            onRenderFailure?.invoke(index, e)
             false
         } catch (e: IllegalStateException) {
+            // The renderer is closed, or a page is already open. This used to be
+            // swallowed silently, which is exactly how "Rendering page…" became an
+            // infinite spinner: the failure never reached the UI.
+            onRenderFailure?.invoke(index, e)
             false
         } catch (e: IndexOutOfBoundsException) {
+            onRenderFailure?.invoke(index, e)
+            false
+        } catch (e: RuntimeException) {
+            // Any other unexpected platform failure is reported, never hidden.
+            onRenderFailure?.invoke(index, e)
             false
         }
     }
+
+    /**
+     * Notified when a page could not be rendered, with the exception behind it.
+     *
+     * The reader turns this into a visible "Page N could not be rendered — Retry"
+     * state, so a failure can never look like a page that is still loading.
+     */
+    var onRenderFailure: ((page: Int, cause: Throwable) -> Unit)? = null
 
     fun pageText(index: Int): String? = textService?.pageText(index)
 
@@ -229,9 +242,6 @@ class PdfDocument private constructor(
 
     companion object {
         private const val MAX_DIMENSION_CACHE = 2048
-
-        /** Native page handles kept per document (roughly one screenful). */
-        private const val MAX_PAGE_HANDLES = 8
 
         /**
          * Opens [uri] through the platform renderer.

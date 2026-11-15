@@ -7,15 +7,14 @@ import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatDelegate
 import io.pagwyn.reader.BuildConfig
 import io.pagwyn.reader.PagwynApplication
 import io.pagwyn.reader.R
 import io.pagwyn.reader.data.AppTheme
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.Settings
 import io.pagwyn.reader.data.ZoomMode
+import io.pagwyn.reader.ui.reader.sheets.ThemeSheet
 import io.pagwyn.reader.ui.widget.PagwynSheet
 
 /** All application settings. Every control applies immediately and persists. */
@@ -36,54 +35,39 @@ class SettingsSheet : PagwynSheet() {
             getString(R.string.settings_version, BuildConfig.VERSION_NAME)
 
         bindTheme(view)
-        bindReaderTheme(view)
         bindMode(view)
         bindZoom(view)
         bindReadingOptions(view)
         bindPrivacy(view)
     }
 
+    /**
+     * One entry point for the theme, opening the same picker the reader's Theme item
+     * uses. The old radio group is gone: it duplicated the picker and, because the
+     * reader painted its own tint, changing it here never affected the reader.
+     */
     private fun bindTheme(view: View) {
-        val group = view.findViewById<RadioGroup>(R.id.themeGroup)
-        when (settings.theme) {
-            AppTheme.SYSTEM -> group.check(R.id.themeSystem)
-            AppTheme.LIGHT -> group.check(R.id.themeLight)
-            AppTheme.DARK -> group.check(R.id.themeDark)
+        val row = view.findViewById<TextView>(R.id.rowTheme)
+        row.text = getString(R.string.settings_app_theme)
+        row.setOnClickListener {
+            ThemeSheet().apply {
+                onApplied = {
+                    dismissAllowingStateLoss()
+                    onThemeChanged?.invoke()
+                }
+            }.show(parentFragmentManager, "theme")
         }
-        group.setOnCheckedChangeListener { _, checkedId ->
-            val theme = when (checkedId) {
-                R.id.themeLight -> AppTheme.LIGHT
-                R.id.themeDark -> AppTheme.DARK
-                else -> AppTheme.SYSTEM
-            }
-            settings.theme = theme
-            AppCompatDelegate.setDefaultNightMode(
-                when (theme) {
-                    AppTheme.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                    AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-                },
-            )
-            onThemeChanged?.invoke()
-        }
+        updateThemeSummary(row)
     }
 
-    private fun bindReaderTheme(view: View) {
-        val group = view.findViewById<RadioGroup>(R.id.readerThemeGroup)
-        when (settings.readerTheme) {
-            ReaderTheme.FOLLOW_APP -> group.check(R.id.readerThemeFollow)
-            ReaderTheme.LIGHT -> group.check(R.id.readerThemeLight)
-            ReaderTheme.SEPIA -> group.check(R.id.readerThemeSepia)
-            ReaderTheme.DARK -> group.check(R.id.readerThemeDark)
+    private fun updateThemeSummary(row: TextView) {
+        val label = when (settings.theme) {
+            AppTheme.SYSTEM -> R.string.theme_system
+            AppTheme.LIGHT -> R.string.theme_light
+            AppTheme.DARK -> R.string.theme_dark
+            AppTheme.BLACK -> R.string.theme_black
         }
-        group.setOnCheckedChangeListener { _, checkedId ->
-            settings.readerTheme = when (checkedId) {
-                R.id.readerThemeLight -> ReaderTheme.LIGHT
-                R.id.readerThemeSepia -> ReaderTheme.SEPIA
-                R.id.readerThemeDark -> ReaderTheme.DARK
-                else -> ReaderTheme.FOLLOW_APP
-            }
-        }
+        row.text = getString(R.string.settings_app_theme_value, getString(label))
     }
 
     private fun bindMode(view: View) {

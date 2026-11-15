@@ -2,8 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      Dark theme. Pagwyn keeps the dark theme genuinely dark (ink navy, not pure
-      black) so OLED panels stay comfortable and the amber accent keeps its warmth.
+      Dark theme. Near-black surfaces (#0F0F12 / #17171C) rather than pure black, so
+      cards read as raised. The OLED variant swaps these for true black in code.
     -->
     <style name="Base.Theme.Pagwyn" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:fontFamily">sans-serif</item>
@@ -29,9 +29,10 @@
         <item name="pwSurfaceSunken">@color/ink_850</item>
         <item name="pwOnSurface">@color/paper_text</item>
         <item name="pwOnSurfaceMuted">@color/paper_text_muted</item>
-        <item name="pwPrimary">@color/amber_400</item>
-        <item name="pwOnPrimary">@color/ink_900</item>
+        <item name="pwPrimary">@color/lime_400</item>
+        <item name="pwOnPrimary">@color/ink_950</item>
         <item name="pwPrimaryMuted">@color/ink_700</item>
+        <item name="pwAccentViolet">@color/violet_500</item>
         <item name="pwOutline">@color/ink_700</item>
         <item name="pwOutlineStrong">@color/ink_600</item>
         <item name="pwDanger">@color/danger_dark</item>

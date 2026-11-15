@@ -28,9 +28,10 @@
         <item name="pwSurfaceSunken">@color/paper_200</item>
         <item name="pwOnSurface">@color/ink_text</item>
         <item name="pwOnSurfaceMuted">@color/ink_text_muted</item>
-        <item name="pwPrimary">@color/amber_600</item>
+        <item name="pwPrimary">@color/lime_600</item>
         <item name="pwOnPrimary">#FFFFFFFF</item>
-        <item name="pwPrimaryMuted">@color/amber_200</item>
+        <item name="pwPrimaryMuted">@color/lime_100</item>
+        <item name="pwAccentViolet">@color/violet_600</item>
         <item name="pwOutline">@color/paper_300</item>
         <item name="pwOutlineStrong">@color/paper_400</item>
         <item name="pwDanger">@color/danger_light</item>
@@ -143,6 +144,22 @@
     <style name="Pagwyn_SheetAnimation">
         <item name="android:windowEnterAnimation">@anim/pw_sheet_in</item>
         <item name="android:windowExitAnimation">@anim/pw_sheet_out</item>
+    </style>
+
+    <!-- Filter chip: pill, 48dp tall so it is a valid touch target. -->
+    <style name="Widget.Pagwyn.Chip" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:background">@drawable/bg_chip</item>
+        <item name="android:textColor">?attr/pwOnSurfaceMuted</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
     </style>
 
     <style name="Widget.Pagwyn.Card" parent="">

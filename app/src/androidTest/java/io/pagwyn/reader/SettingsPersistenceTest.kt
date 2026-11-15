@@ -5,7 +5,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.pagwyn.reader.data.AppTheme
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.Settings
 import io.pagwyn.reader.data.ZoomMode
 import org.junit.After
@@ -41,7 +40,6 @@ class SettingsPersistenceTest {
 
     private fun resetDefaults() {
         settings.theme = AppTheme.SYSTEM
-        settings.readerTheme = ReaderTheme.FOLLOW_APP
         settings.defaultMode = ReadingMode.CONTINUOUS
         settings.defaultZoom = ZoomMode.FIT_WIDTH
         settings.keepScreenOn = false
@@ -54,13 +52,33 @@ class SettingsPersistenceTest {
     @Test
     fun appearanceSettingsSurviveReload() {
         settings.theme = AppTheme.DARK
-        settings.readerTheme = ReaderTheme.SEPIA
         settings.pageSpacingDp = 18
 
         val reloaded = Settings(context)
         assertEquals(AppTheme.DARK, reloaded.theme)
-        assertEquals(ReaderTheme.SEPIA, reloaded.readerTheme)
         assertEquals(18, reloaded.pageSpacingDp)
+    }
+
+    /** The AMOLED variant is a theme, not a separate switch, and must persist. */
+    @Test
+    fun theAmoledThemeSurvivesReload() {
+        settings.theme = AppTheme.BLACK
+        assertEquals(AppTheme.BLACK, Settings(context).theme)
+    }
+
+    /**
+     * The reading-theme preference is gone. A stored value from an older install must
+     * not resurrect it or crash: the theme now has exactly one source of truth.
+     */
+    @Test
+    fun anOldReadingThemePreferenceIsIgnored() {
+        context.getSharedPreferences("pagwyn_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putInt("reader_theme", 1)
+            .commit()
+
+        val reloaded = Settings(context)
+        assertEquals("theme must come from the app theme only", AppTheme.SYSTEM, reloaded.theme)
     }
 
     @Test

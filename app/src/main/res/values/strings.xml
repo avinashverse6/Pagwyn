@@ -5,7 +5,6 @@
     <string name="app_tagline">Read Without Distraction.</string>
 
     <!-- ============================ Home ============================ -->
-    <string name="home_greeting">Your library</string>
     <string name="home_continue_reading">Continue reading</string>
     <string name="home_recent">Recently opened</string>
     <string name="home_recent_empty">No recent documents yet</string>
@@ -13,8 +12,22 @@
     <string name="home_starred">Starred</string>
     <string name="home_starred_empty">Nothing starred yet</string>
     <string name="home_history">Reading history</string>
-    <string name="home_browse">Browse files</string>
     <string name="home_search">Search documents</string>
+    <string name="home_greeting">Library</string>
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <string name="home_continue_kicker">Continue reading</string>
+    <string name="home_your_library">Your library</string>
+    <string name="home_browse">Add PDF</string>
+    <string name="home_pick_document">Pick a PDF</string>
+    <string name="home_page_of">Page %1$d of %2$d</string>
+    <string name="home_empty_title">Nothing here yet</string>
+    <string name="home_empty_body">Add a PDF and it will show up here, right where you left off. No account, no sync, nothing leaves your phone.</string>
+    <string name="filter_all">All</string>
+    <string name="filter_starred">Starred</string>
+    <string name="filter_recent">Recent</string>
+    <string name="cd_document_cover">Cover showing the initials %1$s</string>
     <string name="home_search_hint">Search documents by name</string>
     <string name="home_settings">Settings</string>
     <string name="home_view_all">View all</string>
@@ -46,10 +59,15 @@
     <string name="reader_page_hint">Page number</string>
     <string name="reader_page_invalid">Enter a page between 1 and %1$d</string>
     <string name="reader_page_range">This document has %1$d pages</string>
-    <string name="reader_theme">Reading theme</string>
-    <string name="reader_theme_light">Light</string>
-    <string name="reader_theme_sepia">Sepia</string>
-    <string name="reader_theme_dark">Dark</string>
+    <string name="reader_theme">Theme</string>
+    <string name="reader_appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_subtitle">Applies everywhere: library, reader, sheets and dialogs.</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_black">AMOLED black</string>
+    <string name="settings_app_theme_value">Theme · %1$s</string>
     <string name="reader_mode_scroll">Continuous scroll</string>
     <string name="reader_mode_single">Single page</string>
     <string name="reader_zoom_fit_width">Fit width</string>
@@ -69,6 +87,9 @@
     <string name="reader_fullscreen_off">Controls restored</string>
     <string name="reader_loading">Opening document…</string>
     <string name="reader_page_rendering">Rendering page…</string>
+    <string name="reader_page_failed">Page %1$d could not be rendered</string>
+    <string name="cd_retry_page">Retry rendering this page</string>
+    <string name="cd_page_indicator">Page %1$d of %2$d</string>
     <string name="reader_open_failed">Could not open this document</string>
     <string name="reader_keep_screen_on">Keep screen on</string>
     <string name="reader_fullscreen">Full-screen reading</string>
@@ -120,8 +141,6 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_app_theme">App theme</string>
-    <string name="settings_reader_theme">Reading theme</string>
-    <string name="settings_reader_theme_follow">Use app theme</string>
     <string name="settings_keep_screen_on">Keep screen on while reading</string>
     <string name="settings_keep_screen_on_desc">Prevents the screen from sleeping during reading</string>
     <string name="settings_hide_controls">Hide controls while reading</string>

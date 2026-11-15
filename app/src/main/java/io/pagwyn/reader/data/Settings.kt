@@ -25,22 +25,18 @@ enum class ZoomMode(val storedValue: Int) {
     }
 }
 
-/** Reading tint that surrounds (never alters) the PDF page. */
-enum class ReaderTheme(val storedValue: Int) {
-    LIGHT(0),
-    SEPIA(1),
-    DARK(2),
-    FOLLOW_APP(3);
-
-    companion object {
-        fun from(value: Int): ReaderTheme = entries.firstOrNull { it.storedValue == value } ?: FOLLOW_APP
-    }
-}
-
+/**
+ * The app-wide appearance, applied to every screen (home, reader chrome, sheets,
+ * dialogs) through a single `AppCompatDelegate` mode.
+ *
+ * [BLACK] is a true-black variant for OLED panels: it uses the same dark theme but
+ * swaps the surface colours for `#000000`.
+ */
 enum class AppTheme(val storedValue: Int) {
     SYSTEM(0),
     LIGHT(1),
-    DARK(2);
+    DARK(2),
+    BLACK(3);
 
     companion object {
         fun from(value: Int): AppTheme = entries.firstOrNull { it.storedValue == value } ?: SYSTEM
@@ -61,10 +57,6 @@ class Settings(private val context: Context) {
     var theme: AppTheme
         get() = AppTheme.from(prefs.getInt(KEY_THEME, AppTheme.SYSTEM.storedValue))
         set(value) = prefs.edit { putInt(KEY_THEME, value.storedValue) }
-
-    var readerTheme: ReaderTheme
-        get() = ReaderTheme.from(prefs.getInt(KEY_READER_THEME, ReaderTheme.FOLLOW_APP.storedValue))
-        set(value) = prefs.edit { putInt(KEY_READER_THEME, value.storedValue) }
 
     var keepScreenOn: Boolean
         get() = prefs.getBoolean(KEY_KEEP_SCREEN_ON, false)
@@ -123,7 +115,6 @@ class Settings(private val context: Context) {
     private companion object {
         const val FILE_NAME = "pagwyn_prefs"
         const val KEY_THEME = "theme"
-        const val KEY_READER_THEME = "reader_theme"
         const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val KEY_HIDE_CONTROLS = "hide_controls"
         const val KEY_PAGE_SPACING = "page_spacing"

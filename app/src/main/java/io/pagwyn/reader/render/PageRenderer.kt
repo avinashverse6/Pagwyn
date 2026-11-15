@@ -46,8 +46,19 @@ class PageRenderer(
 ) : AutoCloseable {
 
     /** Delivered on the main thread. */
-    fun interface Listener {
+    interface Listener {
         fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean)
+
+        /**
+         * A page could not be rendered at all (as opposed to "not yet rendered").
+         *
+         * The reader must show an error with a retry action: a swallowed failure is
+         * indistinguishable from a page that is still loading.
+         */
+        fun onPageFailed(page: Int, cause: Throwable) = Unit
+
+        /** The renderer decided not to render a page (no viewport, document closed). */
+        fun onPageSkipped(page: Int) = Unit
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -110,6 +121,7 @@ class PageRenderer(
     ): PdfDocument = withContext(dispatcher) {
         closeInternal()
         val opened = PdfDocument.open(context, uri, password, source)
+        attachFailureLogging(opened)
         document = opened
         documentKey = uri.toString()
         opened
@@ -127,6 +139,7 @@ class PageRenderer(
         runCatching {
             closeInternal()
             PdfDocument.open(context, uri, password).also {
+                attachFailureLogging(it)
                 document = it
                 documentKey = uri.toString()
             }
@@ -214,9 +227,10 @@ class PageRenderer(
     }
 
     private fun renderPreview(page: Int, width: Int, rotation: Int, gen: Int) {
-        val doc = document ?: return
+        val doc = document ?: return fail(page, IllegalStateException("Document is closed"))
         val targetWidth = minOf(width, PREVIEW_MAX_WIDTH).coerceAtLeast(PREVIEW_MIN_WIDTH)
-        val info = runCatching { doc.pageInfo(page) }.getOrNull() ?: return
+        val info = runCatching { doc.pageInfo(page) }.getOrNull()
+            ?: return fail(page, IllegalStateException("Page geometry is unavailable"))
         val key = key(page, width, rotation)
         if (cache.get(key) != null) return
         val previewKey = key(page, targetWidth, rotation)
@@ -227,13 +241,17 @@ class PageRenderer(
             return
         }
         val (w, h) = dimensionsFor(info, targetWidth, rotation)
-        if (!reserveBitmap(w, h)) return
-        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull() ?: return
+        if (!reserveBitmap(w, h)) return fail(page, IllegalStateException("Not enough memory"))
+        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull()
+            ?: return fail(page, IllegalStateException("Could not allocate a page bitmap"))
         val ok = runCatching {
             doc.renderPage(page, bitmap, w, h, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
         }.getOrDefault(false)
         if (!ok || gen != generation) {
-            if (!ok) bitmap.recycleSafely()
+            if (!ok) {
+                bitmap.recycleSafely()
+                return fail(page, IllegalStateException("The platform renderer refused the page"))
+            }
             return
         }
         cache.put(previewKey, bitmap, protectedKeys)
@@ -245,25 +263,30 @@ class PageRenderer(
     }
 
     private fun renderSharp(page: Int, width: Int, rotation: Int, gen: Int) {
-        val doc = document ?: return
+        val doc = document ?: return fail(page, IllegalStateException("Document is closed"))
         val key = key(page, width, rotation)
         if (cache.get(key) != null) {
             deliverCached(page, width, rotation)
             return
         }
-        val info = runCatching { doc.pageInfo(page) }.getOrNull() ?: return
+        val info = runCatching { doc.pageInfo(page) }.getOrNull()
+            ?: return fail(page, IllegalStateException("Page geometry is unavailable"))
         val (w, h) = dimensionsFor(info, width, rotation)
         if (!reserveBitmap(w, h)) {
             // Not enough memory for a full-resolution page: keep the preview. The
             // user still sees readable content rather than a blank slot.
             return
         }
-        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull() ?: return
+        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull()
+            ?: return fail(page, IllegalStateException("Could not allocate a page bitmap"))
         val ok = runCatching {
             doc.renderPage(page, bitmap, w, h, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
         }.getOrDefault(false)
         if (!ok || gen != generation) {
-            if (!ok) bitmap.recycleSafely()
+            if (!ok) {
+                bitmap.recycleSafely()
+                return fail(page, IllegalStateException("The platform renderer refused the page"))
+            }
             return
         }
         cache.put(key, bitmap, protectedKeys)
@@ -272,6 +295,24 @@ class PageRenderer(
                 listener?.onPageRendered(page, bitmap, true)
             }
         }
+    }
+
+    /**
+     * Records the native exception behind a refused page.
+     *
+     * [PdfDocument.renderPage] reports the cause instead of swallowing it; the reader
+     * surfaces the user-facing state through [Listener.onPageFailed].
+     */
+    private fun attachFailureLogging(document: PdfDocument) {
+        document.onRenderFailure = { page, cause ->
+            Log.w(TAG, "renderer refused page $page", cause)
+        }
+    }
+
+    /** Reports a page that could never be drawn, on the main thread. */
+    private fun fail(page: Int, cause: Throwable) {
+        Log.w(TAG, "page $page failed to render", cause)
+        mainHandler.post { listener?.onPageFailed(page, cause) }
     }
 
     /**
@@ -300,22 +341,6 @@ class PageRenderer(
     /** Drops pages far outside the viewport so memory tracks the visible region. */
     fun trimAround(minPage: Int, maxPage: Int) {
         cache.evictRemote(minPage, maxPage, protectedKeys)
-    }
-
-    /**
-     * Renders a page at a small width for the thumbnail grid.
-     *
-     * Thumbnails are not cached in [cache]: the sheet keeps its own budget and
-     * disposing the sheet frees everything at once.
-     */
-    suspend fun renderThumbnail(page: Int, widthPx: Int): Bitmap? = withContext(dispatcher) {
-        val doc = document ?: return@withContext null
-        if (page !in 0 until doc.pageCount) return@withContext null
-        val info = runCatching { doc.pageInfo(page) }.getOrNull() ?: return@withContext null
-        val (w, h) = dimensionsFor(info, widthPx, 0)
-        val bitmap = runCatching { PdfDocument.bitmapFor(w, h) }.getOrNull() ?: return@withContext null
-        val ok = runCatching { doc.renderPage(page, bitmap, w, h) }.getOrDefault(false)
-        if (ok) bitmap else null.also { bitmap.recycleSafely() }
     }
 
     // ------------------------------------------------------------------ text & search

@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reader overflow menu. This is the ONLY place these actions appear: nothing here
+  is duplicated in the bottom bar, which carries navigation and fit only.
+  Order is deliberate: reference tools first, then reading environment, then
+  document actions.
+-->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_bookmarks"
@@ -7,8 +13,8 @@
         android:id="@+id/action_goto_page"
         android:title="@string/reader_go_to_page" />
     <item
-        android:id="@+id/action_appearance"
-        android:title="@string/settings_reader_theme" />
+        android:id="@+id/action_theme"
+        android:title="@string/reader_theme" />
     <item
         android:id="@+id/action_fullscreen"
         android:title="@string/reader_fullscreen" />

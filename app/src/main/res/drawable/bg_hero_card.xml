@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Spotify-style "continue reading" card. The gradient itself is drawn by
+  CoverArtwork (generated from the file name), so this only supplies the shape.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+</ripple>

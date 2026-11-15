@@ -17,6 +17,9 @@ class PagwynApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Applied before any activity is created, so the first frame of the first
+        // screen is already in the chosen theme instead of flashing the old one.
+        runCatching { io.pagwyn.reader.ui.widget.ThemeApplier.apply(settings.theme) }
     }
 
     companion object {

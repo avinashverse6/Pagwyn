@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reading surface.
+
+  Layout contract:
+    * the document is edge to edge and is the only thing that fills the window;
+    * the top bar is a translucent scrim that fades and slides away;
+    * the bottom bar is a floating pill that holds ONLY navigation and fit, so
+      nothing appears both here and in the three-dot menu;
+    * everything overlays the document, so the list never reserves a dead strip.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/readerRoot"
@@ -15,13 +25,6 @@
         android:overScrollMode="never"
         android:scrollbars="none"
         tools:listitem="@layout/item_page" />
-
-    <!-- Single page mode container -->
-    <FrameLayout
-        android:id="@+id/singlePageContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
 
     <!-- Loading state -->
     <LinearLayout
@@ -125,7 +128,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/pwToolbarBackground"
-        android:elevation="2dp"
         android:orientation="vertical">
 
         <LinearLayout
@@ -167,7 +169,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textSize="12sp"
-                    tools:text="42 of 380 · 4.2 MB" />
+                    tools:text="12 pages · 725 KB" />
             </LinearLayout>
 
             <ImageButton
@@ -198,146 +200,77 @@
             android:progressDrawable="@drawable/bg_progress_track" />
     </LinearLayout>
 
-    <!-- ======================= Bottom bar ======================= -->
+    <!-- ======================= Bottom bar (floating pill) ======================= -->
     <LinearLayout
         android:id="@+id/bottomBar"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="?attr/pwToolbarBackground"
-        android:elevation="2dp"
-        android:orientation="vertical"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginStart="@dimen/space_4"
+        android:layout_marginEnd="@dimen/space_4"
+        android:background="@drawable/bg_reader_bar"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_1"
+        android:paddingTop="@dimen/space_1"
+        android:paddingEnd="@dimen/space_1"
         android:paddingBottom="@dimen/space_1">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="@dimen/space_2"
-            android:paddingEnd="@dimen/space_2">
+        <ImageButton
+            android:id="@+id/btnToc"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/reader_toc"
+            android:src="@drawable/ic_toc" />
 
-            <ImageButton
-                android:id="@+id/btnThumbnails"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_thumbnails"
-                android:src="@drawable/ic_thumbnails" />
+        <ImageButton
+            android:id="@+id/btnPrevPage"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/reader_previous_page"
+            android:src="@drawable/ic_chevron_left" />
 
-            <ImageButton
-                android:id="@+id/btnToc"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_toc"
-                android:src="@drawable/ic_toc" />
-
-            <ImageButton
-                android:id="@+id/btnZoomOut"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_zoom_level"
-                android:src="@drawable/ic_zoom_out" />
-
-            <TextView
-                android:id="@+id/zoomLabel"
-                style="@style/Text.Pagwyn.Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:minWidth="52dp"
-                android:textColor="?attr/pwOnSurface"
-                android:textSize="13sp"
-                tools:text="100%" />
-
-            <ImageButton
-                android:id="@+id/btnZoomIn"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_zoom_level"
-                android:src="@drawable/ic_zoom_in" />
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <ImageButton
-                android:id="@+id/btnFit"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_zoom_fit_width"
-                android:src="@drawable/ic_fit_width" />
-
-            <ImageButton
-                android:id="@+id/btnReadingTheme"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_theme"
-                android:src="@drawable/ic_text_format" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+        <!-- Tappable page indicator: "3 / 12", opens Go to page. -->
+        <TextView
+            android:id="@+id/pageIndicator"
+            style="@style/Text.Pagwyn.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="?attr/pwSurfaceSunken"
+            android:gravity="center"
+            android:minWidth="84dp"
             android:paddingStart="@dimen/space_4"
             android:paddingEnd="@dimen/space_4"
-            android:paddingBottom="@dimen/space_1">
+            android:textColor="?attr/pwOnSurface"
+            android:textSize="14sp"
+            tools:text="3 / 12" />
 
-            <ImageButton
-                android:id="@+id/btnPrevPage"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_previous_page"
-                android:src="@drawable/ic_chevron_left" />
+        <ImageButton
+            android:id="@+id/btnNextPage"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/reader_next_page"
+            android:src="@drawable/ic_chevron_right" />
 
-            <TextView
-                android:id="@+id/pageIndicator"
-                style="@style/Text.Pagwyn.Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/pwSurfaceSunken"
-                android:paddingStart="@dimen/space_4"
-                android:paddingTop="@dimen/space_1"
-                android:paddingEnd="@dimen/space_4"
-                android:paddingBottom="@dimen/space_1"
-                android:textColor="?attr/pwOnSurface"
-                android:textSize="13sp"
-                tools:text="42 / 380" />
+        <ImageButton
+            android:id="@+id/btnFit"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/reader_zoom_fit_width"
+            android:src="@drawable/ic_fit_width" />
 
-            <ImageButton
-                android:id="@+id/btnNextPage"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_next_page"
-                android:src="@drawable/ic_chevron_right" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <ImageButton
-                android:id="@+id/btnRotate"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_rotate"
-                android:src="@drawable/ic_rotate" />
-
-            <ImageButton
-                android:id="@+id/btnBrightness"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_brightness"
-                android:src="@drawable/ic_brightness" />
-
-            <ImageButton
-                android:id="@+id/btnShare"
-                style="@style/Widget.Pagwyn.IconButton"
-                android:contentDescription="@string/reader_share"
-                android:src="@drawable/ic_share" />
-        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnRotate"
+            style="@style/Widget.Pagwyn.IconButton"
+            android:contentDescription="@string/reader_rotate"
+            android:src="@drawable/ic_rotate" />
     </LinearLayout>
 
-    <!-- Transient page badge shown while turning pages in single-page mode. -->
+    <!-- Transient page indicator shown while the chrome is hidden. -->
     <TextView
         android:id="@+id/pageBadge"
         style="@style/Text.Pagwyn.Caption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="112dp"
+        android:layout_marginBottom="96dp"
         android:background="@drawable/bg_badge"
         android:paddingStart="@dimen/space_4"
         android:paddingTop="@dimen/space_1"
@@ -346,21 +279,21 @@
         android:textColor="?attr/pwOnSurface"
         android:visibility="gone" />
 
-    <!-- "Back to where you were" chip, shown after jumping away from the resume point. -->
+    <!-- "Back to page N" pill: small, self-dismissing. -->
     <TextView
         android:id="@+id/jumpBackChip"
         style="@style/Text.Pagwyn.Caption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="@dimen/space_4"
-        android:background="@drawable/bg_chip"
-        android:elevation="2dp"
+        android:layout_marginBottom="96dp"
+        android:background="@drawable/bg_pill_accent"
+        android:elevation="3dp"
+        android:gravity="center"
+        android:minHeight="40dp"
         android:paddingStart="@dimen/space_4"
-        android:paddingTop="@dimen/space_2"
         android:paddingEnd="@dimen/space_4"
-        android:paddingBottom="@dimen/space_2"
-        android:textColor="?attr/pwPrimary"
+        android:textColor="?attr/pwOnPrimary"
         android:visibility="gone" />
 
 </FrameLayout>

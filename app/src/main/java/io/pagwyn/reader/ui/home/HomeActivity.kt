@@ -13,7 +13,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,6 +31,11 @@ import io.pagwyn.reader.core.PagwynDocument
 import io.pagwyn.reader.databinding.ActivityHomeBinding
 import io.pagwyn.reader.ui.metadata.MetadataActivity
 import io.pagwyn.reader.ui.reader.ReaderActivity
+import io.pagwyn.reader.ui.widget.CoverArtwork
+import io.pagwyn.reader.ui.widget.ThemeApplier
+import io.pagwyn.reader.ui.widget.colorFromAttr
+import io.pagwyn.reader.ui.widget.dp
+import io.pagwyn.reader.ui.widget.pillBackground
 import kotlinx.coroutines.launch
 
 /**
@@ -45,8 +49,7 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private val viewModel: HomeViewModel by viewModels()
-    private lateinit var recentAdapter: DocumentRowAdapter
-    private lateinit var starredAdapter: DocumentCardAdapter
+    private lateinit var libraryAdapter: DocumentCardAdapter
     private lateinit var searchAdapter: DocumentRowAdapter
 
     private val openDocument = registerForActivityResult(
@@ -68,15 +71,25 @@ class HomeActivity : AppCompatActivity() {
             binding.root.post { continueReading() }
         }
         binding.versionLabel.text = getString(R.string.app_name) + " " + BuildConfig.VERSION_NAME
+        binding.brandGreeting.text = getString(greetingRes())
     }
 
+    /**
+     * Re-applies the stored theme before the window is created.
+     *
+     * [io.pagwyn.reader.ui.widget.ThemeApplier] is idempotent, so calling it here after
+     * the Application already did means a theme chosen while the app is running is in
+     * effect for the very next activity, without a relaunch.
+     */
     private fun applyThemeMode() {
-        val mode = when (PagwynApplication.settings.theme) {
-            io.pagwyn.reader.data.AppTheme.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            io.pagwyn.reader.data.AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-            io.pagwyn.reader.data.AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-        }
-        AppCompatDelegate.setDefaultNightMode(mode)
+        ThemeApplier.applyStored(PagwynApplication.settings)
+    }
+
+    /** A warmer greeting than a static title, without pretending to know the name. */
+    private fun greetingRes(): Int = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+        in 5..11 -> R.string.home_greeting_morning
+        in 12..16 -> R.string.home_greeting_afternoon
+        else -> R.string.home_greeting_evening
     }
 
     private fun applyInsets() {
@@ -91,27 +104,26 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupLists() {
-        recentAdapter = DocumentRowAdapter(
+        libraryAdapter = DocumentCardAdapter(
             onOpen = ::openPdf,
             onStar = viewModel::toggleStar,
             onLongPress = ::showDocumentMenu,
         )
-        starredAdapter = DocumentCardAdapter(onOpen = ::openPdf)
         searchAdapter = DocumentRowAdapter(
             onOpen = ::openPdf,
             onStar = viewModel::toggleStar,
-            onLongPress = ::showDocumentMenu,
         )
 
-        binding.recentList.apply {
-            layoutManager = LinearLayoutManager(this@HomeActivity)
-            adapter = recentAdapter
+        // Two columns, 12dp apart: cards stay wide enough for two lines of title on a
+        // 360dp screen while still reading as a grid rather than a list.
+        binding.libraryGrid.apply {
+            layoutManager = androidx.recyclerview.widget.GridLayoutManager(
+                this@HomeActivity,
+                GRID_COLUMNS,
+            )
+            adapter = libraryAdapter
             itemAnimator = null
-        }
-        binding.starredList.apply {
-            layoutManager = LinearLayoutManager(this@HomeActivity, LinearLayoutManager.HORIZONTAL, false)
-            adapter = starredAdapter
-            itemAnimator = null
+            addItemDecoration(GridSpacing(GRID_GAP_DP))
         }
         binding.searchResultsList.apply {
             layoutManager = LinearLayoutManager(this@HomeActivity)
@@ -137,10 +149,19 @@ class HomeActivity : AppCompatActivity() {
 
     private fun setupActions() {
         binding.btnBrowse.setOnClickListener { pickDocument() }
+        binding.btnEmptyAdd.setOnClickListener { pickDocument() }
+        binding.chipAll.setOnClickListener { viewModel.setFilter(LibraryFilter.ALL) }
+        binding.chipStarred.setOnClickListener { viewModel.setFilter(LibraryFilter.STARRED) }
+        binding.chipRecent.setOnClickListener { viewModel.setFilter(LibraryFilter.RECENT) }
         binding.searchFieldContainer.isClickable = false
-        binding.btnSettings.setOnClickListener { SettingsSheet().show(supportFragmentManager, "settings") }
-        binding.recentSeeAll.setOnClickListener { showHistory() }
-        binding.continueCard.continueRoot.setOnClickListener {
+        binding.btnSettings.setOnClickListener {
+            SettingsSheet().apply {
+                // Recreate only when the theme actually changed: recreating on every
+                // settings change would throw away the sheet's scroll position.
+                onThemeChanged = { applyThemeToRunningScreen() }
+            }.show(supportFragmentManager, "settings")
+        }
+        binding.continueCard.setOnClickListener {
             viewModel.state.value.lastRead?.let(::openPdf)
         }
     }
@@ -154,44 +175,82 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun render(state: HomeState) {
-        binding.recentList.isVisible = !state.searching && state.recent.isNotEmpty()
-        binding.recentEmpty.isVisible = !state.searching && state.recent.isEmpty() && !state.loading
-        binding.recentHeader.isVisible = !state.searching
-        binding.recentSeeAll.isVisible = state.history.size > state.recent.size
-
-        recentAdapter.submitList(state.recent)
-
-        binding.starredHeader.isVisible = !state.searching && state.starred.isNotEmpty()
-        binding.starredList.isVisible = !state.searching && state.starred.isNotEmpty()
-        starredAdapter.submitList(state.starred)
-
-        val lastRead = state.lastRead
-        binding.continueCard.root.isVisible = !state.searching && lastRead != null && lastRead.pageCount > 0
-        if (lastRead != null) bindContinueCard(lastRead)
-
-        // Search mode replaces the library with results.
         val searchVisible = state.searching
-        binding.searchResultsHeader.isVisible = searchVisible
-        binding.searchResultsList.isVisible = searchVisible && state.results.isNotEmpty()
+
+        // Search replaces the library entirely while a query is active.
+        binding.searchResultsList.isVisible = searchVisible
         binding.searchNoMatch.isVisible = searchVisible && state.results.isEmpty() && !state.loading
         if (searchVisible) {
             searchAdapter.submitList(state.results)
             binding.searchNoMatch.text = getString(R.string.home_no_match, state.query)
+        } else {
+            searchAdapter.submitList(emptyList())
+        }
+
+        binding.libraryHeader.isVisible = !searchVisible
+        binding.filterScroll.isVisible = !searchVisible && !state.isEmpty
+        binding.libraryGrid.isVisible = !searchVisible && !state.isEmpty
+        binding.emptyState.isVisible = !searchVisible && state.isEmpty && !state.loading
+
+        if (!searchVisible) {
+            libraryAdapter.submitList(state.visible)
+            renderFilters(state)
+            binding.libraryTitle.text = when (state.filter) {
+                LibraryFilter.ALL -> getString(R.string.home_your_library)
+                LibraryFilter.STARRED -> getString(R.string.filter_starred)
+                LibraryFilter.RECENT -> getString(R.string.filter_recent)
+            }
+        }
+
+        val lastRead = state.lastRead
+        binding.continueCard.isVisible = !searchVisible && lastRead != null && lastRead.pageCount > 0
+        if (lastRead != null) bindContinueCard(lastRead)
+    }
+
+    /** Selected chip: accent fill and accent-tinted text; the rest stay neutral. */
+    private fun renderFilters(state: HomeState) {
+        val chips = mapOf(
+            binding.chipAll to LibraryFilter.ALL,
+            binding.chipStarred to LibraryFilter.STARRED,
+            binding.chipRecent to LibraryFilter.RECENT,
+        )
+        for ((chip, filter) in chips) {
+            val selected = state.filter == filter
+            chip.isSelected = selected
+            chip.background = if (selected) {
+                pillBackground(this, colorFromAttr(R.attr.pwPrimary))
+            } else {
+                androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_chip)
+            }
+            chip.setTextColor(
+                colorFromAttr(if (selected) R.attr.pwOnPrimary else R.attr.pwOnSurfaceMuted),
+            )
         }
     }
 
     private fun bindContinueCard(document: PagwynDocument) {
-        val card = binding.continueCard
-        card.continueTitle.text = document.title
-        card.continueMeta.text = getString(
+        binding.continueTitle.text = document.title
+        binding.continueMeta.text = getString(
             R.string.home_resume_page,
             document.lastPage + 1,
             document.pageCount,
         )
-        card.continueProgress.progress = (document.progress.coerceIn(0f, 1f) * 1000).toInt()
-        card.continuePercent.text = getString(
-            R.string.reader_percent,
-            Formatters.percent(document.progress),
+        binding.continueProgress.progress = (document.progress.coerceIn(0f, 1f) * 1000).toInt()
+
+        // The card carries the same gradient as its cover, so the two read as one
+        // surface (Spotify's album-card pattern) instead of a picture on a box.
+        val seed = document.displayName.ifBlank { document.title }
+        val dark = ThemeApplier.isDark(this)
+        val (start, end) = CoverArtwork.colorsFor(seed, dark)
+        binding.continueCard.background =
+            android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(start, end),
+            ).apply { cornerRadius = dp(24f) }
+        binding.continueCover.setImageBitmap(CoverArtwork.create(192, seed, dark))
+        binding.continueCover.contentDescription = getString(
+            R.string.cd_document_cover,
+            CoverArtwork.initialsFor(document.title),
         )
     }
 
@@ -259,20 +318,6 @@ class HomeActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showHistory() {
-        val state = viewModel.state.value
-        val items = state.history.map { "${it.title}\u0000${Formatters.relativeTime(it.lastOpenedAt)}" }
-        if (items.isEmpty()) return
-        val labels = state.history.map {
-            "${it.title} — ${if (it.pageCount > 0) "page ${it.lastPage + 1} of ${it.pageCount}" else Formatters.relativeTime(it.lastOpenedAt)}"
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.home_history)
-            .setItems(labels) { _, which -> state.history.getOrNull(which)?.let(::openPdf) }
-            .setNegativeButton(R.string.action_close, null)
-            .show()
-    }
-
     private fun toast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
@@ -317,5 +362,9 @@ class HomeActivity : AppCompatActivity() {
         const val MENU_STAR = 3
         const val MENU_SHARE = 4
         const val MENU_REMOVE = 5
+
+        /** Two columns keeps titles readable on a 360dp screen. */
+        const val GRID_COLUMNS = 2
+        const val GRID_GAP_DP = 12
     }
 }

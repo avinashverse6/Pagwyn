@@ -4,7 +4,7 @@
       Semantic theme attributes.
 
       Using attributes (instead of direct colour references) keeps every view,
-      drawable and shape automatically correct across light, dark and sepia modes.
+      drawable and shape automatically correct across light and dark themes.
     -->
     <attr name="pwSurface" format="color" />
     <attr name="pwSurfaceRaised" format="color" />
@@ -14,6 +14,7 @@
     <attr name="pwPrimary" format="color" />
     <attr name="pwOnPrimary" format="color" />
     <attr name="pwPrimaryMuted" format="color" />
+    <attr name="pwAccentViolet" format="color" />
     <attr name="pwOutline" format="color" />
     <attr name="pwOutlineStrong" format="color" />
     <attr name="pwDanger" format="color" />

@@ -32,87 +32,16 @@
                 android:text="@string/settings_appearance" />
 
             <TextView
-                style="@style/Text.Pagwyn.Label"
+                android:id="@+id/rowTheme"
+                style="@style/Text.Pagwyn.Body"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="@dimen/touch_target"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:paddingStart="@dimen/screen_margin"
-                android:paddingTop="@dimen/space_2"
                 android:paddingEnd="@dimen/screen_margin"
                 android:text="@string/settings_app_theme" />
-
-            <RadioGroup
-                android:id="@+id/themeGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="@dimen/screen_margin"
-                android:paddingEnd="@dimen/screen_margin">
-
-                <RadioButton
-                    android:id="@+id/themeSystem"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/settings_theme_system" />
-
-                <RadioButton
-                    android:id="@+id/themeLight"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/settings_theme_light" />
-
-                <RadioButton
-                    android:id="@+id/themeDark"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/settings_theme_dark" />
-            </RadioGroup>
-
-            <TextView
-                style="@style/Text.Pagwyn.Label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="@dimen/screen_margin"
-                android:paddingTop="@dimen/space_3"
-                android:paddingEnd="@dimen/screen_margin"
-                android:text="@string/settings_reader_theme" />
-
-            <RadioGroup
-                android:id="@+id/readerThemeGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="@dimen/screen_margin"
-                android:paddingEnd="@dimen/screen_margin">
-
-                <RadioButton
-                    android:id="@+id/readerThemeFollow"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/settings_reader_theme_follow" />
-
-                <RadioButton
-                    android:id="@+id/readerThemeLight"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/reader_theme_light" />
-
-                <RadioButton
-                    android:id="@+id/readerThemeSepia"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/reader_theme_sepia" />
-
-                <RadioButton
-                    android:id="@+id/readerThemeDark"
-                    style="@style/Text.Pagwyn.Body"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:text="@string/reader_theme_dark" />
-            </RadioGroup>
 
             <TextView
                 style="@style/Text.Pagwyn.Label"

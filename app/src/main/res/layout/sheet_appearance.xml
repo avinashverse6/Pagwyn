@@ -8,53 +8,7 @@
 
     <include layout="@layout/view_sheet_header" />
 
-    <TextView
-        style="@style/Text.Pagwyn.Section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="@dimen/screen_margin"
-        android:paddingTop="@dimen/space_2"
-        android:paddingEnd="@dimen/screen_margin"
-        android:paddingBottom="@dimen/space_2"
-        android:text="@string/settings_reader_theme" />
-
-    <LinearLayout
-        android:id="@+id/themeRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="@dimen/screen_margin"
-        android:paddingEnd="@dimen/screen_margin">
-
-        <Button
-            android:id="@+id/themeLight"
-            style="@style/Widget.Pagwyn.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:text="@string/reader_theme_light"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/themeSepia"
-            style="@style/Widget.Pagwyn.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="@dimen/space_2"
-            android:layout_weight="1"
-            android:text="@string/reader_theme_sepia"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/themeDark"
-            style="@style/Widget.Pagwyn.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="@dimen/space_2"
-            android:layout_weight="1"
-            android:text="@string/reader_theme_dark"
-            android:textSize="13sp" />
-    </LinearLayout>
+    <!-- Reading theme used to live here; it is now the app-wide theme in Settings. -->
 
     <TextView
         style="@style/Text.Pagwyn.Section"

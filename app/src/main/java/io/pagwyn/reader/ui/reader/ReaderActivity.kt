@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
@@ -23,7 +22,6 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.getSystemService
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -42,7 +40,6 @@ import io.pagwyn.reader.core.DocumentResolver
 import io.pagwyn.reader.core.Formatters
 import io.pagwyn.reader.core.Intents
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.Settings
 import io.pagwyn.reader.data.ZoomMode
 import io.pagwyn.reader.databinding.ActivityReaderBinding
@@ -50,15 +47,18 @@ import io.pagwyn.reader.pdf.PageInfo
 import io.pagwyn.reader.pdf.PdfDocument
 import io.pagwyn.reader.pdf.SearchHit
 import io.pagwyn.reader.render.PageBitmapCache
+import io.pagwyn.reader.render.PageRenderer
 import io.pagwyn.reader.ui.metadata.MetadataActivity
 import io.pagwyn.reader.ui.reader.sheets.AppearanceSheet
 import io.pagwyn.reader.ui.reader.sheets.BookmarksSheet
 import io.pagwyn.reader.ui.reader.sheets.GoToPageSheet
 import io.pagwyn.reader.ui.reader.sheets.SearchSheet
-import io.pagwyn.reader.ui.reader.sheets.ThumbnailSheet
+import io.pagwyn.reader.ui.reader.sheets.ThemeSheet
 import io.pagwyn.reader.ui.reader.sheets.TocSheet
 import io.pagwyn.reader.ui.widget.PageImageView
+import io.pagwyn.reader.ui.widget.ThemeApplier
 import io.pagwyn.reader.ui.widget.colorFromAttr
+import io.pagwyn.reader.ui.widget.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -108,7 +108,15 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         setupInsets()
         observeState()
 
-        viewModel.setRendererListener { page, bitmap, sharp -> onPageRendered(page, bitmap, sharp) }
+        viewModel.setRendererListener(object : PageRenderer.Listener {
+            override fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean) {
+                onPageRendered(page, bitmap, sharp)
+            }
+
+            override fun onPageFailed(page: Int, cause: Throwable) {
+                onPageFailed(page)
+            }
+        })
 
         currentUri = resolveIntentUri(intent)
         if (currentUri == null) {
@@ -127,13 +135,9 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     // ------------------------------------------------------------------ setup
 
+    /** Re-applies the stored theme; one code path shared with Home and Settings. */
     private fun applyThemeMode() {
-        val mode = when (settings.theme) {
-            io.pagwyn.reader.data.AppTheme.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            io.pagwyn.reader.data.AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-            io.pagwyn.reader.data.AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-        }
-        AppCompatDelegate.setDefaultNightMode(mode)
+        ThemeApplier.applyStored(settings)
     }
 
     private fun setupWindow() {
@@ -169,6 +173,13 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
             applyContentInsets()
             insets
         }
+        // The bars change height (insets, wrapping, hiding), and the list padding is
+        // derived from those heights, so re-apply it whenever either bar lays out.
+        val relayout = View.OnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) applyContentInsets()
+        }
+        binding.topBar.addOnLayoutChangeListener(relayout)
+        binding.bottomBar.addOnLayoutChangeListener(relayout)
         ViewCompat.requestApplyInsets(binding.readerRoot)
     }
 
@@ -177,10 +188,25 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
      * padding. This guarantees the first and last page are never hidden behind the
      * chrome, while the document still uses the full window.
      */
+    /**
+     * Padding that keeps the document clear of the floating chrome.
+     *
+     * Both bars pad themselves for the system bars (`topBar` includes the status bar
+     * height, `bottomBar` includes the navigation bar height), so their *measured*
+     * heights are already the full space they occupy. Adding `systemBars.bottom` here
+     * as well counted the navigation bar twice and left a dead strip of background
+     * between the last page and the bottom bar.
+     */
     private fun applyContentInsets() {
-        val topChrome = if (binding.topBar.isVisible) resources.getDimensionPixelSize(R.dimen.toolbar_height) + systemBars.top else systemBars.top
+        val topChrome = if (binding.topBar.isVisible) {
+            binding.topBar.height.takeIf { it > 0 }
+                ?: (resources.getDimensionPixelSize(R.dimen.toolbar_height) + systemBars.top)
+        } else {
+            systemBars.top
+        }
         val bottomChrome = if (binding.bottomBar.isVisible) {
-            (binding.bottomBar.height.takeIf { it > 0 } ?: dp(112)) + systemBars.bottom
+            binding.bottomBar.height.takeIf { it > 0 }
+                ?: (dp(BOTTOM_BAR_FALLBACK_DP) + systemBars.bottom)
         } else {
             systemBars.bottom
         }
@@ -229,15 +255,9 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         binding.btnSearch.setOnClickListener { openSearch() }
         binding.btnBookmark.setOnClickListener { toggleBookmark() }
         binding.btnMore.setOnClickListener { showMoreMenu(it) }
-        binding.btnZoomIn.setOnClickListener { zoomStep(increasing = true) }
-        binding.btnZoomOut.setOnClickListener { zoomStep(increasing = false) }
         binding.btnFit.setOnClickListener { cycleFitMode() }
-        binding.btnReadingTheme.setOnClickListener { showAppearanceSheet() }
         binding.btnRotate.setOnClickListener { viewModel.rotate() }
-        binding.btnShare.setOnClickListener { shareDocument() }
-        binding.btnBrightness.setOnClickListener { showAppearanceSheet() }
         binding.btnToc.setOnClickListener { openToc() }
-        binding.btnThumbnails.setOnClickListener { openThumbnails() }
         binding.btnPrevPage.setOnClickListener { stepPage(-1) }
         binding.btnNextPage.setOnClickListener { stepPage(1) }
         binding.pageIndicator.setOnClickListener { openGoToPage() }
@@ -275,12 +295,10 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
             // user is offered a route that actually can help.
             binding.errorOtherApp.isVisible = error.retryable
             binding.pageList.isVisible = false
-            binding.singlePageContainer.isVisible = false
         }
 
         if (state.error == null && !state.loading) {
-            binding.pageList.isVisible = state.mode == ReadingMode.CONTINUOUS
-            binding.singlePageContainer.isVisible = false
+            binding.pageList.isVisible = true
         }
 
         // Feed the list once the document is open. Without this the reader would
@@ -292,9 +310,16 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
         binding.documentTitle.text = state.documentTitle
         binding.documentSubtitle.text = state.documentSubtitle
-        binding.pageIndicator.text = state.pageLabel
-        binding.zoomLabel.text = getString(R.string.reader_zoom_level, state.zoomPercent)
-
+        // The indicator is blank until a document is open; once it is, it must show
+        // "3 / 12" (it used to stay empty because the label was only set before the
+        // page count was known).
+        binding.pageIndicator.text =
+            if (state.pageCount > 0) state.pageLabel else ""
+        binding.pageIndicator.contentDescription = if (state.pageCount > 0) {
+            getString(R.string.cd_page_indicator, state.currentPage + 1, state.pageCount)
+        } else {
+            null
+        }
         binding.btnBookmark.setImageResource(
             if (state.isBookmarked) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark,
         )
@@ -313,7 +338,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
             binding.readingProgressBar.isVisible = false
         }
 
-        applyReaderTheme(state.theme)
+        applyAppThemeToChrome()
         binding.jumpBackChip.isVisible = state.canJumpBack && !state.loading && state.error == null
         if (state.canJumpBack) {
             binding.jumpBackChip.text = getString(R.string.reader_jump_back, state.jumpBackPage + 1)
@@ -324,53 +349,95 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         syncMode(state.mode)
     }
 
+    /**
+     * Reader chrome fades and slides instead of popping.
+     *
+     * 180ms in, 150ms out: fast enough to feel responsive on a tap, slow enough to
+     * read as a movement rather than a flicker. The bars are kept in the hierarchy
+     * while animating so the list padding does not jump mid-fade.
+     */
+    private fun setChromeVisible(visible: Boolean) {
+        val bars = listOf(binding.topBar, binding.bottomBar)
+        val target = if (visible) 1f else 0f
+        if (bars.all { it.alpha == target && it.isVisible == visible }) return
+        for (bar in bars) {
+            bar.animate().cancel()
+            if (visible) {
+                bar.isVisible = true
+                bar.translationY = if (bar === binding.topBar) -dp(8f) else dp(8f)
+                bar.alpha = 0f
+                bar.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(CHROME_IN_MS)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            } else {
+                bar.animate()
+                    .alpha(0f)
+                    .translationY(if (bar === binding.topBar) -dp(8f) else dp(8f))
+                    .setDuration(CHROME_OUT_MS)
+                    .withEndAction { bar.isVisible = false }
+                    .start()
+            }
+        }
+        // The document reclaims the space the bars occupied once they are gone.
+        binding.pageList.postDelayed({ applyContentInsets() }, CHROME_OUT_MS)
+    }
+
     private fun updateChromeVisibility(state: ReaderState) {
-        // In full-screen the chrome only appears when the user taps.
+        // Chrome is visible unless full-screen has hidden it, or the user is reading
+        // and the bars have auto-hidden.
+        val visible = !state.fullscreen || state.controlsVisible
         if (state.fullscreen) {
-            binding.topBar.isVisible = state.controlsVisible
-            binding.bottomBar.isVisible = state.controlsVisible
+            setChromeVisible(visible)
+        } else if (visible && !binding.topBar.isVisible) {
+            setChromeVisible(true)
         }
     }
 
-    private fun applyReaderTheme(theme: ReaderTheme) {
-        val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES
-        val resolved = when (theme) {
-            ReaderTheme.FOLLOW_APP -> if (dark) ReaderTheme.DARK else ReaderTheme.LIGHT
-            else -> theme
-        }
-        val background = when (resolved) {
-            ReaderTheme.SEPIA -> 0xFFF0E6D2.toInt()
-            ReaderTheme.DARK -> 0xFF0E1016.toInt()
-            else -> 0xFFE9E5DC.toInt()
+    /**
+     * Reader chrome follows the **app** theme.
+     *
+     * There is no separate reading tint any more: the page is always drawn on the
+     * app's reader background, and the chrome uses the same surface/text colours as the
+     * rest of the app, so switching theme in Settings changes the reader too.
+     */
+    private fun applyAppThemeToChrome() {
+        val dark = ThemeApplier.isDark(this)
+        val black = ThemeApplier.blackSelected && dark
+        val background = when {
+            black -> BlackSurface
+            dark -> colorFromAttr(R.attr.pwReaderBackground)
+            else -> colorFromAttr(R.attr.pwReaderBackground)
         }
         binding.readerRoot.setBackgroundColor(background)
         binding.pageList.setBackgroundColor(background)
-        binding.singlePageContainer.setBackgroundColor(background)
 
-        val isDark = resolved == ReaderTheme.DARK
         val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.isAppearanceLightStatusBars = !isDark
-        controller.isAppearanceLightNavigationBars = !isDark
-        // Toolbars follow the reading theme so the chrome never clashes with the page.
-        val toolbarColor = when (resolved) {
-            ReaderTheme.SEPIA -> 0xFFE7DBC2.toInt()
-            ReaderTheme.DARK -> 0xFF1B1F2B.toInt()
-            else -> 0xFFFDFBF7.toInt()
-        }
-        val onToolbar = when (resolved) {
-            ReaderTheme.DARK -> 0xFFF1EDE5.toInt()
-            else -> 0xFF1C2030.toInt()
-        }
-        binding.topBar.setBackgroundColor(toolbarColor)
-        binding.bottomBar.setBackgroundColor(toolbarColor)
-        tintChrome(binding.topBar, onToolbar)
-        tintChrome(binding.bottomBar, onToolbar)
-        binding.pageIndicator.setTextColor(onToolbar)
-        binding.zoomLabel.setTextColor(onToolbar)
-        binding.documentTitle.setTextColor(onToolbar)
-        binding.documentSubtitle.setTextColor(if (isDark) 0xFFA8ADBD.toInt() else 0xFF5B6274.toInt())
+        controller.isAppearanceLightStatusBars = !dark
+        controller.isAppearanceLightNavigationBars = !dark
+
+        val toolbar = if (black) BlackSurface else colorFromAttr(R.attr.pwToolbarBackground)
+        binding.topBar.setBackgroundColor(toolbar)
+        binding.bottomBar.background = readerBarBackground(toolbar)
+        val onBar = colorFromAttr(R.attr.pwOnSurface)
+        tintChrome(binding.topBar, onBar)
+        tintChrome(binding.bottomBar, onBar)
     }
+
+    /**
+     * The floating bar keeps its pill shape while following the theme.
+     *
+     * A tinted copy of the pill drawable is used instead of a flat colour so the
+     * rounded corners and elevation survive a theme change.
+     */
+    private fun readerBarBackground(color: Int): android.graphics.drawable.GradientDrawable =
+        android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = dp(999f)
+            setColor(color)
+        }
 
     /**
      * Dims the reading surface without touching the PDF pixels.
@@ -397,7 +464,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     private fun syncMode(mode: ReadingMode) {
         layoutManager?.setSnapToPages(binding.pageList, mode == ReadingMode.SINGLE_PAGE)
         binding.pageList.isVisible = hasPages()
-        binding.singlePageContainer.isVisible = false
         applyContentInsets()
     }
 
@@ -508,6 +574,17 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     // ------------------------------------------------------------------ render callbacks
 
+    /**
+     * A page could not be drawn. The slot switches from its placeholder to an error
+     * with a Retry action, so a failure is never mistaken for a slow render.
+     */
+    private fun onPageFailed(page: Int) {
+        if (isFinishing || isDestroyed) return
+        continuousAdapter.markFailed(page)
+        val view = layoutManager?.findViewByPosition(page) as? PageSlotView
+        view?.showError()
+    }
+
     private fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean) {
         if (isFinishing || isDestroyed) return
         if (binding.pageList.isComputingLayout) return
@@ -517,6 +594,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         val view = manager.findViewByPosition(index) as? PageSlotView
         if (view != null) {
             view.setBitmap(bitmap, sharp)
+            continuousAdapter.clearFailed(index)
             continuousAdapter.remember(index, bitmap)
         } else {
             continuousAdapter.remember(index, bitmap)
@@ -553,6 +631,13 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
     override fun onSlotRendered(page: Int, sharp: Boolean) = Unit
 
     override fun onSlotBound(slot: PageSlotView) = Unit
+
+    override fun onSlotRetry(page: Int) {
+        continuousAdapter.clearFailed(page)
+        val width = currentRenderWidthPx()
+        if (width > 0) viewModel.rememberRenderWidth(width)
+        viewModel.retryPage(page, width)
+    }
 
     // ------------------------------------------------------------------ navigation
 
@@ -672,24 +757,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     // ------------------------------------------------------------------ toolbar actions
 
-    private fun zoomStep(increasing: Boolean) {
-        val state = viewModel.state.value
-        val manager = layoutManager ?: return
-        val position = state.currentPage
-        val view = manager.findViewByPosition(position) as? PageSlotView
-        if (view != null) {
-            if (increasing) view.zoomIn() else view.zoomOut()
-        } else {
-            // No live view for the page: adjust the stored zoom mode instead.
-            val next = if (increasing) {
-                minOf(400, state.zoomPercent + 25)
-            } else {
-                maxOf(50, state.zoomPercent - 25)
-            }
-            viewModel.setZoomPercent(next)
-        }
-    }
-
     private fun cycleFitMode() {
         val state = viewModel.state.value
         val next = when (state.zoomMode) {
@@ -735,7 +802,23 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     private fun toggleBookmark() {
         val added = viewModel.toggleBookmark()
-        toast(getString(if (added) R.string.reader_bookmark_added else R.string.reader_bookmark_removed))
+        // A light haptic is the confirmation: a toast over the page would cover the
+        // text the user is reading.
+        binding.btnBookmark.performHapticFeedback(
+            when {
+                !added -> android.view.HapticFeedbackConstants.KEYBOARD_TAP
+                Build.VERSION.SDK_INT >= 30 -> android.view.HapticFeedbackConstants.CONFIRM
+                else -> android.view.HapticFeedbackConstants.VIRTUAL_KEY
+            },
+        )
+        val scaleFrom = if (added) 1.18f else 0.9f
+        binding.btnBookmark.animate()
+            .scaleX(scaleFrom).scaleY(scaleFrom)
+            .setDuration(90)
+            .withEndAction {
+                binding.btnBookmark.animate().scaleX(1f).scaleY(1f).setDuration(110).start()
+            }
+            .start()
     }
 
     private fun showMoreMenu(anchor: View) {
@@ -750,7 +833,7 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
             when (item.itemId) {
                 R.id.action_bookmarks -> { openBookmarks(); true }
                 R.id.action_goto_page -> { openGoToPage(); true }
-                R.id.action_appearance -> { showAppearanceSheet(); true }
+                R.id.action_theme -> { showThemeSheet(); true }
                 R.id.action_fullscreen -> { toggleFullscreen(); true }
                 R.id.action_keep_screen_on -> {
                     settings.keepScreenOn = !settings.keepScreenOn
@@ -880,20 +963,6 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         sheet.show(supportFragmentManager, "bookmarks")
     }
 
-    private fun openThumbnails() {
-        val state = viewModel.state.value
-        val sheet = ThumbnailSheet()
-        sheet.pageCount = state.pageCount
-        sheet.currentPage = state.currentPage
-        sheet.onPageSelected = { page -> jumpToPage(page) }
-        sheet.thumbnailProvider = { page -> renderThumbnail(page) }
-        sheet.show(supportFragmentManager, "thumbnails")
-    }
-
-    private suspend fun renderThumbnail(page: Int): Bitmap? = withContext(Dispatchers.IO) {
-        viewModel.renderThumbnail(page)
-    }
-
     private fun openGoToPage() {
         val state = viewModel.state.value
         if (state.pageCount <= 0) return
@@ -905,14 +974,29 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         sheet.show(supportFragmentManager, "goto")
     }
 
+    /**
+     * Opens the same theme picker Settings uses. The activity is recreated only when
+     * the theme actually changed, and only once the sheet has closed, so the sheet is
+     * not torn down mid-tap.
+     */
+    private fun showThemeSheet() {
+        val sheet = ThemeSheet().apply {
+            onApplied = { applyThemeToRunningScreen(); dismissAllowingStateLoss() }
+        }
+        sheet.show(supportFragmentManager, "theme")
+    }
+
+    /** Re-resolves every inflated view after a theme change. */
+    private fun applyThemeToRunningScreen() {
+        runCatching { recreate() }
+    }
+
     private fun showAppearanceSheet() {
         val state = viewModel.state.value
         val sheet = AppearanceSheet().apply {
-            theme = state.theme
             mode = state.mode
             spacingDp = settings.pageSpacingDp
             brightness = settings.readingBrightnessPercent
-            onThemeChanged = { viewModel.setTheme(it) }
             onModeChanged = { viewModel.setMode(it) }
             onSpacingChanged = { dp ->
                 settings.pageSpacingDp = dp
@@ -1055,6 +1139,15 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
         /** Pages requested for rendering per viewport update. */
         private const val RENDER_WINDOW = 5
+
+        /** True-black surface used by the AMOLED variant. */
+        private val BlackSurface = 0xFF000000.toInt()
+
+        /** Used only before the bottom bar has been measured once. */
+        private const val BOTTOM_BAR_FALLBACK_DP = 104
+
+        private const val CHROME_IN_MS = 180L
+        private const val CHROME_OUT_MS = 150L
 
         private const val GEOMETRY_AHEAD = 4
         private const val OUTLINE_SCAN_PAGES = 600

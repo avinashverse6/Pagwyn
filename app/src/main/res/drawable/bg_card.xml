@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Notion-style document card: soft raised surface, 20dp corners, no border. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?attr/pwRipple">
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="16dp" />
+            <corners android:radius="20dp" />
             <solid android:color="?attr/pwSurfaceRaised" />
-            <stroke android:width="1dp" android:color="?attr/pwOutline" />
         </shape>
     </item>
 </ripple>

@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Which set of documents the library grid shows. */
+enum class LibraryFilter { ALL, STARRED, RECENT }
+
 /** Everything the home screen shows, in one immutable snapshot. */
 data class HomeState(
     val loading: Boolean = true,
@@ -26,9 +29,18 @@ data class HomeState(
     val query: String = "",
     val results: List<PagwynDocument> = emptyList(),
     val lastRead: PagwynDocument? = null,
+    val filter: LibraryFilter = LibraryFilter.ALL,
 ) {
     val isEmpty: Boolean get() = recent.isEmpty() && starred.isEmpty()
     val searching: Boolean get() = query.isNotBlank()
+
+    /** Documents for the current filter chip. */
+    val visible: List<PagwynDocument>
+        get() = when (filter) {
+            LibraryFilter.ALL -> history
+            LibraryFilter.STARRED -> history.filter { it.isStarred }
+            LibraryFilter.RECENT -> recent
+        }
 }
 
 /**
@@ -82,6 +94,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
             _state.value = snapshot
         }
+    }
+
+    fun setFilter(filter: LibraryFilter) {
+        if (_state.value.filter == filter) return
+        _state.update { it.copy(filter = filter) }
     }
 
     fun onQueryChanged(query: String) {

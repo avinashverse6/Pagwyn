@@ -1,7 +1,6 @@
 package io.pagwyn.reader.ui.reader
 
 import io.pagwyn.reader.data.ReadingMode
-import io.pagwyn.reader.data.ReaderTheme
 import io.pagwyn.reader.data.ZoomMode
 import io.pagwyn.reader.pdf.SearchHit
 
@@ -16,7 +15,6 @@ data class ReaderState(
     val mode: ReadingMode = ReadingMode.CONTINUOUS,
     val zoomMode: ZoomMode = ZoomMode.FIT_WIDTH,
     val zoomPercent: Int = 100,
-    val theme: ReaderTheme = ReaderTheme.FOLLOW_APP,
     val rotation: Int = 0,
     val controlsVisible: Boolean = true,
     val fullscreen: Boolean = false,

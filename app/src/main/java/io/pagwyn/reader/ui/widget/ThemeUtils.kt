@@ -32,3 +32,19 @@ fun android.view.View.setAlphaEnabled(enabled: Boolean) {
     alpha = if (enabled) 1f else 0.38f
     isEnabled = enabled
 }
+
+/** Converts dp to pixels for views created in code. */
+fun android.content.Context.dp(value: Float): Float = value * resources.displayMetrics.density
+
+/**
+ * A fully rounded (pill) background in a single colour.
+ *
+ * Used by code-created buttons so they match the themed pill shapes used in
+ * layouts, without a drawable per colour.
+ */
+fun pillBackground(context: android.content.Context, color: Int): android.graphics.drawable.GradientDrawable =
+    android.graphics.drawable.GradientDrawable().apply {
+        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+        cornerRadius = context.dp(999f)
+        setColor(color)
+    }
