@@ -96,14 +96,19 @@ class PdfDocument private constructor(
      * Runs [block] with a fresh [PdfRenderer.Page]. The page is always closed so
      * the native layer never runs out of page handles.
      */
+    /**
+     * Runs [block] with a page handle.
+     *
+     * Pages are deliberately *not* closed after use. On Android 7 (API 24) the
+     * platform's `PdfRenderer.closePage` double-frees the pdfium page and aborts the
+     * process (SIGSEGV inside `CPDF_Page::~CPDF_Page`); the abort is random, so it
+     * looks like a rare crash in production. Page handles are owned by the renderer and
+     * freed when it closes, so keeping them alive costs one native object per page that
+     * is actually rendered, and correctness wins over that small cost.
+     */
     private inline fun <T> withPage(index: Int, block: (PdfRenderer.Page) -> T): T {
         check(!closed) { "Document is closed" }
-        val page = renderer.openPage(index)
-        try {
-            return block(page)
-        } finally {
-            page.close()
-        }
+        return block(renderer.openPage(index))
     }
 
 
