@@ -16,7 +16,8 @@ import org.robolectric.annotation.Config
  *
  * Uses Robolectric because real [Bitmap] objects are required. The tests verify the
  * properties that keep Pagwyn stable on low-RAM devices: the byte budget is never
- * exceeded, eviction is distance-based, and recycled bitmaps are never handed out.
+ * exceeded, eviction is distance-based, and evicted bitmaps are dropped rather than
+ * recycled (recycling a bitmap a view has drawn aborts the process on Android).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -43,6 +44,20 @@ class PageBitmapCacheTest {
 
         assertNull(cache.get(PageBitmapCache.Key(3, 100, 0, "content://docs/second.pdf")))
         assertEquals(first, cache.get(PageBitmapCache.Key(3, 100, 0, "content://docs/first.pdf")))
+    }
+
+    @Test
+    fun `eviction drops bitmaps without recycling them`() {
+        val cache = PageBitmapCache(8 * 1024 * 1024)
+        val bmp = bitmap()
+        cache.put(PageBitmapCache.Key(4, 64, 0), bmp)
+
+        cache.evictRemote(0, 1)
+
+        assertNull(cache.get(PageBitmapCache.Key(4, 64, 0)))
+        assertEquals(0, cache.size)
+        // Dropped, not recycled: a view may still reference it in a display list.
+        assertTrue(!bmp.isRecycled)
     }
 
     @Test

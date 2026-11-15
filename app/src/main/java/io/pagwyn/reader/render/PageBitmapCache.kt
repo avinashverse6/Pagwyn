@@ -57,8 +57,7 @@ class PageBitmapCache(budgetBytes: Int) {
 
     /**
      * Adds a bitmap. [protectKeys] are bitmaps currently being drawn by a view and
-     * must not be recycled underneath it: recycling a bitmap that a view is painting
-     * throws `Canvas: trying to use a recycled bitmap`, which crashes the reader.
+     * must not be dropped mid-frame either; it would flicker and re-render.
      */
     @Synchronized
     fun put(key: Key, bitmap: Bitmap, protectKeys: Set<Key> = emptySet()) {
@@ -85,8 +84,13 @@ class PageBitmapCache(budgetBytes: Int) {
     }
 
     /**
-     * Frees every cached page outside the `keep` window. Called after scrolling so
+     * Drops every cached page outside the `keep` window. Called after scrolling so
      * memory tracks the visible region instead of everything ever rendered.
+     *
+     * Entries are *dropped*, never recycled: a view may already have recorded the
+     * bitmap into a hardware-accelerated display list, and recycling it then crashes
+     * the process inside Skia rather than throwing a Java exception. Since Android 7
+     * bitmaps live in the Java heap, so dropping the reference is enough for the GC.
      */
     @Synchronized
     fun evictRemote(minPage: Int, maxPage: Int, protect: Set<Key> = emptySet()) {
@@ -95,7 +99,6 @@ class PageBitmapCache(budgetBytes: Int) {
             val (key, entry) = iterator.next()
             if ((key.page < minPage || key.page > maxPage) && key !in protect) {
                 usedBytes -= entry.bytes
-                entry.bitmap.recycleSafely()
                 iterator.remove()
             }
         }
@@ -109,7 +112,6 @@ class PageBitmapCache(budgetBytes: Int) {
             val (key, entry) = iterator.next()
             if (key.page == page && key !in protect) {
                 usedBytes -= entry.bytes
-                entry.bitmap.recycleSafely()
                 iterator.remove()
             }
         }
@@ -117,7 +119,6 @@ class PageBitmapCache(budgetBytes: Int) {
 
     @Synchronized
     fun clear() {
-        entries.values.forEach { it.bitmap.recycleSafely() }
         entries.clear()
         usedBytes = 0
     }
@@ -136,7 +137,6 @@ class PageBitmapCache(budgetBytes: Int) {
             val (key, entry) = iterator.next()
             if (key == protect || key in protectKeys) continue
             usedBytes -= entry.bytes
-            entry.bitmap.recycleSafely()
             iterator.remove()
         }
     }
@@ -151,7 +151,6 @@ class PageBitmapCache(budgetBytes: Int) {
     private fun removeLocked(key: Key) {
         val entry = entries.remove(key) ?: return
         usedBytes -= entry.bytes
-        entry.bitmap.recycleSafely()
     }
 
     companion object {
@@ -184,7 +183,13 @@ class PageBitmapCache(budgetBytes: Int) {
     }
 }
 
-/** Recycles a bitmap, ignoring double-recycle and already-recycled bitmaps. */
+/**
+ * Recycles a bitmap that provably never reached a view.
+ *
+ * Deliberately narrow: anything handed to a view (or to `Canvas`) must be dropped
+ * instead, because recycling a bitmap that is referenced by a recorded display list
+ * aborts the process.
+ */
 fun Bitmap.recycleSafely() {
     if (!isRecycled) runCatching { recycle() }
 }
