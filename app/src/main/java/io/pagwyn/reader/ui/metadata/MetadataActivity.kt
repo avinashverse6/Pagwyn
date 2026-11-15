@@ -143,30 +143,22 @@ class MetadataActivity : AppCompatActivity() {
     private fun readDocumentInfo(app: android.app.Application, uri: Uri): DocumentInfo {
         var size = if (uri.scheme == "file") File(uri.path.orEmpty()).length() else -1L
         return runCatching {
-            val descriptor = if (uri.scheme == "file") {
-                android.os.ParcelFileDescriptor.open(
-                    File(uri.path.orEmpty()),
-                    android.os.ParcelFileDescriptor.MODE_READ_ONLY,
-                )
-            } else {
-                app.contentResolver.openFileDescriptor(uri, "r")
-            } ?: return DocumentInfo(0, size, null, false)
-            if (size < 0) size = runCatching { descriptor.statSize }.getOrDefault(-1L)
-            descriptor.use { pfd ->
-                val renderer = android.graphics.pdf.PdfRenderer(pfd)
-                try {
-                    val count = renderer.pageCount
-                    val pageSize = if (count > 0) {
-                        renderer.openPage(0).use { page ->
-                            Formatters.pageSize(page.width, page.height)
-                        }
-                    } else {
-                        null
-                    }
-                    DocumentInfo(count, size, pageSize, encrypted = false)
-                } finally {
-                    runCatching { renderer.close() }
+            // Reuse the reader's document layer rather than opening a second native
+            // renderer: on Android 7 closing a renderer twice (close + finalizer) aborts
+            // the process, and only one place should own that knowledge.
+            val document = io.pagwyn.reader.pdf.PdfDocument.open(app, uri)
+            try {
+                if (size < 0) size = document.source.size
+                val count = document.pageCount
+                val pageSize = if (count > 0) {
+                    val info = document.pageInfo(0)
+                    Formatters.pageSize(info.widthPoints, info.heightPoints)
+                } else {
+                    null
                 }
+                DocumentInfo(count, size, pageSize, encrypted = false)
+            } finally {
+                document.close()
             }
         }.getOrElse {
             DocumentInfo(0, size, null, it is SecurityException)

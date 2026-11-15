@@ -29,6 +29,32 @@ sealed class PdfOpenException(message: String, cause: Throwable? = null) : Excep
 }
 
 /**
+ * Keeps closed `PdfRenderer` instances reachable on Android 7.
+ *
+ * `PdfRenderer.close()` on API 24 frees the native document but leaves the pointer in
+ * the Java object, and the object's finalizer then frees it a second time. The result is
+ * a `SIGSEGV` in the `FinalizerDaemon` inside `CPDF_Document::~CPDF_Document`, which
+ * kills the app some seconds after a document is closed. Holding a reference to the
+ * (now tiny, already-closed) object stops the finalizer from ever running.
+ *
+ * The list is capped, so this cannot grow without bound; the retained objects hold no
+ * native memory of their own once closed.
+ */
+private object RetiredRenderers {
+    private const val MAX_RETAINED = 64
+
+    private val retained = java.util.ArrayDeque<PdfRenderer>(MAX_RETAINED)
+
+    fun retireIfNeeded(renderer: PdfRenderer) {
+        if (android.os.Build.VERSION.SDK_INT > 24) return
+        synchronized(retained) {
+            retained.addLast(renderer)
+            while (retained.size > MAX_RETAINED) retained.removeFirst()
+        }
+    }
+}
+
+/**
  * A single page handle.
  *
  * [widthPoints] and [heightPoints] are the intrinsic page dimensions in points
@@ -192,6 +218,7 @@ class PdfDocument private constructor(
         if (closed) return
         closed = true
         runCatching { renderer.close() }
+        RetiredRenderers.retireIfNeeded(renderer)
         runCatching { descriptor.close() }
         textService?.close()
         runCatching { textDescriptor?.close() }
@@ -265,6 +292,7 @@ class PdfDocument private constructor(
 
             if (renderer.pageCount <= 0) {
                 runCatching { renderer.close() }
+                RetiredRenderers.retireIfNeeded(renderer)
                 textDescriptor?.closeSafely()
                 throw PdfOpenException.Corrupt()
             }
