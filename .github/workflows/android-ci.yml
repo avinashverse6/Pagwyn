@@ -277,7 +277,21 @@ jobs:
             adb logcat -c
             ls /tmp/pagwyn-results-34
             cat /tmp/log34-pdf.txt /tmp/log34-reader.txt /tmp/log34-home.txt /tmp/log34-settings.txt > /tmp/instrumented34.log
-            find /tmp/pagwyn-results-34 -name 'TEST-*.xml' -exec sh -c 'echo "=== $1"; cat "$1"' _ {} \; > /tmp/xml-dump34.txt 2>/dev/null
+            python3 - <<'PYFAILS34' > /tmp/failures34.txt 2>/dev/null || true
+          import glob, xml.etree.ElementTree as ET
+          for path in glob.glob('/tmp/pagwyn-results-34/**/TEST-*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for child in list(case.findall('failure')) + list(case.findall('error')):
+                      print(f"=== {case.get('classname')}#{case.get('name')}")
+                      print((child.get('message') or '').strip()[:400])
+                      body = (child.text or '').strip().splitlines()
+                      print("\n".join(line[:300] for line in body[:14]))
+                      print()
+          PYFAILS34
             cat /tmp/pagwyn-results-34/pdf-crash.txt /tmp/pagwyn-results-34/reader-crash.txt /tmp/pagwyn-results-34/home-crash.txt /tmp/pagwyn-results-34/settings-crash.txt > /tmp/pagwyn-results-34/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results-34 -maxdepth 6 -name '*.*' | head -n 40
             test ! -e /tmp/pagwyn-results-34/pdf.fail -a ! -e /tmp/pagwyn-results-34/reader.fail -a ! -e /tmp/pagwyn-results-34/home.fail -a ! -e /tmp/pagwyn-results-34/settings.fail
@@ -332,7 +346,21 @@ jobs:
             adb logcat -c
             ls /tmp/pagwyn-results
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
-            find /tmp/pagwyn-results -name 'TEST-*.xml' -exec sh -c 'echo "=== $1"; cat "$1"' _ {} \; > /tmp/xml-dump.txt 2>/dev/null
+            python3 - <<'PYFAILS24' > /tmp/failures.txt 2>/dev/null || true
+          import glob, xml.etree.ElementTree as ET
+          for path in glob.glob('/tmp/pagwyn-results/**/TEST-*.xml', recursive=True):
+              try:
+                  root = ET.parse(path).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for child in list(case.findall('failure')) + list(case.findall('error')):
+                      print(f"=== {case.get('classname')}#{case.get('name')}")
+                      print((child.get('message') or '').strip()[:400])
+                      body = (child.text or '').strip().splitlines()
+                      print("\n".join(line[:300] for line in body[:14]))
+                      print()
+          PYFAILS24
             cat /tmp/pagwyn-results/pdf-crash.txt /tmp/pagwyn-results/reader-crash.txt /tmp/pagwyn-results/home-crash.txt /tmp/pagwyn-results/settings-crash.txt > /tmp/pagwyn-results/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results -maxdepth 6 -name '*.*' | head -n 40
             test ! -e /tmp/pagwyn-results/pdf.fail -a ! -e /tmp/pagwyn-results/reader.fail -a ! -e /tmp/pagwyn-results/home.fail -a ! -e /tmp/pagwyn-results/settings.fail
@@ -353,8 +381,8 @@ jobs:
           parts.append("**classes**\n```\n" + ("\n".join(markers) or "(none ran)") + "\n```")
           for label, path, limit in (
               ("gradle test lines (API 24)", "/tmp/instrumented.log", 3000),
-              ("result xml (API 34)", "/tmp/xml-dump34.txt", 5000),
-              ("result xml (API 24)", "/tmp/xml-dump.txt", 5000),
+              ("test failures (API 34)", "/tmp/failures34.txt", 5000),
+              ("test failures (API 24)", "/tmp/failures.txt", 5000),
               ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 6000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
           ):

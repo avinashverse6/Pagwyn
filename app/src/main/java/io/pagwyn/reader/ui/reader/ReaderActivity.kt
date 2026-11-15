@@ -10,6 +10,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -109,13 +110,16 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         setupInsets()
         observeState()
 
+        // Qualified with `this@ReaderActivity`: inside the anonymous listener these
+        // names would bind to the overrides themselves and recurse until the stack
+        // overflows, killing the app on the first rendered page.
         viewModel.setRendererListener(object : PageRenderer.Listener {
             override fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean) {
-                onPageRendered(page, bitmap, sharp)
+                this@ReaderActivity.onPageRendered(page, bitmap, sharp)
             }
 
             override fun onPageFailed(page: Int, cause: Throwable) {
-                onPageFailed(page)
+                this@ReaderActivity.onPageFailed(page, cause)
             }
         })
 
@@ -575,31 +579,33 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
 
     // ------------------------------------------------------------------ render callbacks
 
-    /**
-     * A page could not be drawn. The slot switches from its placeholder to an error
-     * with a Retry action, so a failure is never mistaken for a slow render.
-     */
-    private fun onPageFailed(page: Int) {
-        if (isFinishing || isDestroyed) return
-        continuousAdapter.markFailed(page)
-        val view = layoutManager?.findViewByPosition(page) as? PageSlotView
-        view?.showError()
-    }
-
+    /** Paints a freshly rendered page into its slot, if that slot is on screen. */
     private fun onPageRendered(page: Int, bitmap: Bitmap, sharp: Boolean) {
         if (isFinishing || isDestroyed) return
         if (binding.pageList.isComputingLayout) return
         val manager = layoutManager ?: return
-        val index = if (continuousAdapter.pageCount > page) page else -1
-        if (index < 0) return
-        val view = manager.findViewByPosition(index) as? PageSlotView
+        if (page < 0 || page >= continuousAdapter.pageCount) return
+        val view = manager.findViewByPosition(page) as? PageSlotView
         if (view != null) {
             view.setBitmap(bitmap, sharp)
-            continuousAdapter.clearFailed(index)
-            continuousAdapter.remember(index, bitmap)
+            continuousAdapter.clearFailed(page)
+            continuousAdapter.remember(page, bitmap)
         } else {
-            continuousAdapter.remember(index, bitmap)
+            // Not bound right now: keep the bitmap so binding can paint it instantly.
+            continuousAdapter.remember(page, bitmap)
         }
+    }
+
+    /**
+     * A page could not be drawn. The slot switches from its placeholder to an error
+     * with a Retry action, so a failure is never mistaken for a slow render.
+     */
+    private fun onPageFailed(page: Int, cause: Throwable?) {
+        if (isFinishing || isDestroyed) return
+        Log.w("PagwynReader", "page ${page + 1} failed to render", cause)
+        continuousAdapter.markFailed(page)
+        val view = layoutManager?.findViewByPosition(page) as? PageSlotView
+        view?.showError()
     }
 
     // ------------------------------------------------------------------ gestures (Host)
