@@ -74,9 +74,11 @@ class PageImageView @JvmOverloads constructor(
     val contentRect: RectF get() = RectF(bitmapRect)
 
     fun setPageBitmap(next: Bitmap?) {
-        if (bitmap === next) return
-        bitmap = next
-        hasContent = next != null
+        // A recycled bitmap is as good as none: drawing it would throw.
+        val safe = next?.takeUnless { it.isRecycled }
+        if (bitmap === safe) return
+        bitmap = safe
+        hasContent = safe != null
         invalidate()
     }
 

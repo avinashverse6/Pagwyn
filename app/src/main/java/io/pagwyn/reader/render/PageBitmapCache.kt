@@ -44,13 +44,18 @@ class PageBitmapCache(budgetBytes: Int) {
         return entry.bitmap
     }
 
+    /**
+     * Adds a bitmap. [protectKeys] are bitmaps currently being drawn by a view and
+     * must not be recycled underneath it: recycling a bitmap that a view is painting
+     * throws `Canvas: trying to use a recycled bitmap`, which crashes the reader.
+     */
     @Synchronized
-    fun put(key: Key, bitmap: Bitmap) {
+    fun put(key: Key, bitmap: Bitmap, protectKeys: Set<Key> = emptySet()) {
         val bytes = byteCount(bitmap)
         val previous = entries.put(key, Entry(bitmap, bytes))
         if (previous != null) usedBytes -= previous.bytes
         usedBytes += bytes
-        trimToBudget(protect = key)
+        trimToBudget(protect = key, protectKeys = protectKeys)
     }
 
     /**
@@ -73,11 +78,11 @@ class PageBitmapCache(budgetBytes: Int) {
      * memory tracks the visible region instead of everything ever rendered.
      */
     @Synchronized
-    fun evictRemote(minPage: Int, maxPage: Int) {
+    fun evictRemote(minPage: Int, maxPage: Int, protect: Set<Key> = emptySet()) {
         val iterator = entries.entries.iterator()
         while (iterator.hasNext()) {
             val (key, entry) = iterator.next()
-            if (key.page < minPage || key.page > maxPage) {
+            if ((key.page < minPage || key.page > maxPage) && key !in protect) {
                 usedBytes -= entry.bytes
                 entry.bitmap.recycleSafely()
                 iterator.remove()
@@ -87,11 +92,11 @@ class PageBitmapCache(budgetBytes: Int) {
 
     /** Drops all bitmaps of a page, whatever zoom level they were rendered at. */
     @Synchronized
-    fun evictPage(page: Int) {
+    fun evictPage(page: Int, protect: Set<Key> = emptySet()) {
         val iterator = entries.entries.iterator()
         while (iterator.hasNext()) {
             val (key, entry) = iterator.next()
-            if (key.page == page) {
+            if (key.page == page && key !in protect) {
                 usedBytes -= entry.bytes
                 entry.bitmap.recycleSafely()
                 iterator.remove()
@@ -111,14 +116,14 @@ class PageBitmapCache(budgetBytes: Int) {
     fun retainedKeys(): Set<Key> = entries.keys.toSet()
 
     @Synchronized
-    fun trimToBudget(protect: Key? = null, extraReserve: Int = 0) {
+    fun trimToBudget(protect: Key? = null, extraReserve: Int = 0, protectKeys: Set<Key> = emptySet()) {
         if (entries.isEmpty()) return
         val effectiveBudget = (maxBytes - extraReserve).coerceAtLeast(MIN_BUDGET / 2)
         if (usedBytes <= effectiveBudget) return
         val iterator = entries.entries.iterator()
         while (iterator.hasNext() && usedBytes > effectiveBudget) {
             val (key, entry) = iterator.next()
-            if (key == protect) continue
+            if (key == protect || key in protectKeys) continue
             usedBytes -= entry.bytes
             entry.bitmap.recycleSafely()
             iterator.remove()

@@ -461,6 +461,9 @@ class ReaderActivity : androidx.appcompat.app.AppCompatActivity(), PageSlotView.
         }
 
         viewModel.requestRender(order.toList(), width)
+        // Tell the cache which pages are on screen before trimming, so a bitmap that a
+        // view is drawing is never recycled underneath it.
+        viewModel.setOnScreenPages(continuousAdapter.visiblePages())
         // Keep only nearby pages in the bitmap cache.
         viewModel.trimCache(focus - CACHE_WINDOW, focus + CACHE_WINDOW)
 

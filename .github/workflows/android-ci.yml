@@ -203,6 +203,7 @@ jobs:
             ls /tmp/pagwyn-results
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
             find /tmp/pagwyn-results -name 'TEST-*.xml' -exec sh -c 'echo "=== $1"; cat "$1"' _ {} \; > /tmp/xml-dump.txt 2>/dev/null
+            adb logcat -d -v brief > /tmp/logcat.txt 2>&1
             find /tmp/pagwyn-results -maxdepth 6 -name '*.*' | head -n 40
             test ! -e /tmp/pagwyn-results/pdf.fail -a ! -e /tmp/pagwyn-results/reader.fail -a ! -e /tmp/pagwyn-results/home.fail -a ! -e /tmp/pagwyn-results/settings.fail
 
@@ -222,14 +223,19 @@ jobs:
           for label, path, limit in (
               ("gradle test lines", "/tmp/instrumented.log", 3000),
               ("result xml", "/tmp/xml-dump.txt", 9000),
+              ("logcat", "/tmp/logcat.txt", 12000),
           ):
               try:
                   text = open(path, errors="replace").read()
               except OSError:
                   continue
               parts.append(f"**{label}**: {len(text)} chars")
-              if label.startswith("gradle"):
-                  pass
+              if label == "logcat":
+                  text = "\n".join(
+                      line for line in text.splitlines()
+                      if "FATAL" in line or "pagwyn" in line.lower() or "Exception" in line
+                      or "Canvas" in line or "recycled" in line or "TestRunner: failed" in line
+                  )
               if label.startswith("gradle"):
                   text = "\n".join(
                       line for line in text.splitlines()

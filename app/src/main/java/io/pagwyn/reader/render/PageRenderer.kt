@@ -77,6 +77,14 @@ class PageRenderer(
     private val queuedSharp = HashSet<Int>()
     private val closing = AtomicBoolean(false)
 
+    /**
+     * Bitmaps the UI is currently drawing. Eviction never recycles these: a bitmap
+     * recycled while a view is painting it crashes with
+     * "Canvas: trying to use a recycled bitmap".
+     */
+    @Volatile
+    private var protectedKeys: Set<PageBitmapCache.Key> = emptySet()
+
     val pageCount: Int get() = document?.pageCount ?: 0
 
     val isOpen: Boolean get() = document != null
@@ -216,7 +224,7 @@ class PageRenderer(
             if (!ok) bitmap.recycleSafely()
             return
         }
-        cache.put(previewKey, bitmap)
+        cache.put(previewKey, bitmap, protectedKeys)
         mainHandler.post {
             if (!bitmap.isRecycled && gen == generation) {
                 listener?.onPageRendered(page, bitmap, false)
@@ -246,7 +254,7 @@ class PageRenderer(
             if (!ok) bitmap.recycleSafely()
             return
         }
-        cache.put(key, bitmap)
+        cache.put(key, bitmap, protectedKeys)
         mainHandler.post {
             if (!bitmap.isRecycled && gen == generation) {
                 listener?.onPageRendered(page, bitmap, true)
@@ -279,7 +287,7 @@ class PageRenderer(
 
     /** Drops pages far outside the viewport so memory tracks the visible region. */
     fun trimAround(minPage: Int, maxPage: Int) {
-        cache.evictRemote(minPage, maxPage)
+        cache.evictRemote(minPage, maxPage, protectedKeys)
     }
 
     /**
@@ -335,6 +343,15 @@ class PageRenderer(
             }
         }.onFailure { Log.w(TAG, "close scheduling failed", it) }
         runCatching { executor.shutdown() }
+    }
+
+    /** Every cache key currently held for [page], at any render width or rotation. */
+    fun cachedKeysFor(page: Int): Set<PageBitmapCache.Key> =
+        cache.retainedKeys().filterTo(HashSet()) { it.page == page }
+
+    /** Registers the keys the reader currently has bound to views. */
+    fun setProtectedKeys(keys: Set<PageBitmapCache.Key>) {
+        protectedKeys = keys
     }
 
     private fun closeInternal() {

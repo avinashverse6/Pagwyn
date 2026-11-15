@@ -386,7 +386,31 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     fun cachedBitmapAny(page: Int): Bitmap? = renderer.cachedAny(page)
 
-    fun trimCache(minPage: Int, maxPage: Int) = renderer.trimAround(minPage, maxPage)
+    /**
+     * Pages currently bound to views, so their bitmaps are never recycled while drawn.
+     *
+     * Kept on the ViewModel because both the cache eviction and the render completion
+     * path need it, and it must survive a configuration change.
+     */
+    private val onScreenPages = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
+
+    fun setOnScreenPages(pages: Set<Int>) {
+        onScreenPages.clear()
+        onScreenPages.addAll(pages)
+    }
+
+    fun trimCache(minPage: Int, maxPage: Int) {
+        // Protect every cached variant of a page that is on screen, at any zoom level:
+        // the view may be drawing the preview while the sharp render lands.
+        val protectedKeys = HashSet<PageBitmapCache.Key>()
+        for (page in onScreenPages) {
+            renderer.cachedKeysFor(page).forEach { protectedKeys.add(it) }
+        }
+        renderer.setProtectedKeys(protectedKeys)
+        renderer.trimAround(minPage, maxPage)
+    }
+
+
 
     fun setRendererListener(listener: PageRenderer.Listener?) {
         renderer.listener = listener

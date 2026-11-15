@@ -69,11 +69,38 @@ class ContinuousReaderAdapter(
 
     fun bitmapOf(page: Int): Bitmap? = boundBitmaps[page]
 
+    /**
+     * Pages whose bitmaps are currently drawn by a view holder.
+     *
+     * The renderer must never recycle these: freeing a bitmap that a view is painting
+     * crashes the reader ("Canvas: trying to use a recycled bitmap").
+     */
+    fun visiblePages(): Set<Int> {
+        val pages = HashSet<Int>(boundBitmaps.size)
+        for (holder in attachedHolders) {
+            pages.add(holder.slot.pageIndex)
+        }
+        return pages
+    }
+
+    private val attachedHolders = java.util.Collections.newSetFromMap(
+        java.util.WeakHashMap<SlotHolder, Boolean>(),
+    ).let { set ->
+        java.util.Collections.synchronizedSet(set)
+    }
+
+    private fun track(holder: SlotHolder, attached: Boolean) {
+        if (attached) attachedHolders.add(holder) else attachedHolders.remove(holder)
+    }
+
     fun remember(page: Int, bitmap: Bitmap?) {
         if (bitmap == null) boundBitmaps.remove(page) else boundBitmaps[page] = bitmap
     }
 
-    fun clearBound() = boundBitmaps.clear()
+    fun clearBound() {
+        boundBitmaps.clear()
+        attachedHolders.clear()
+    }
 
     override fun getItemCount(): Int = pageCount
 
@@ -125,6 +152,10 @@ class ContinuousReaderAdapter(
         holder.slot.currentBitmap()?.let { remember(holder.slot.pageIndex, it) }
         holder.slot.setBitmap(null, sharp = false)
     }
+
+    override fun onViewAttachedToWindow(holder: SlotHolder) = track(holder, true)
+
+    override fun onViewDetachedFromWindow(holder: SlotHolder) = track(holder, false)
 
     private companion object {
         const val PAYLOAD_GEOMETRY = "geometry"
