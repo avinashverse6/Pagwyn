@@ -247,7 +247,10 @@ jobs:
                                  or "Abort message" in line or "signal" in line
                                  or "pagwyn" in line.lower() or "Exception" in line
                                  or "recycled" in line
-                                 or (stripped.startswith("#") and len(stripped) > 2))
+                                 or " pc " in line or "#00" in line or "#01" in line
+                                 or "#02" in line or "#03" in line or "#04" in line
+                                 or "#05" in line or "#06" in line or "#07" in line
+                                 or "libpdfium" in line or "libhwui" in line or "libc.so" in line)
                       if keyword:
                           keep.append(line[:200])
                   text = "\n".join(keep)
