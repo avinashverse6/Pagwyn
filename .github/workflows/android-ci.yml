@@ -165,6 +165,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # The API 24 (Android 7.0) image is used deliberately: it is the oldest supported
+      # version, so it exercises the strictest platform behaviour. It is also the least
+      # stable image — pdfium and even system_server segfault under sustained load — so a
+      # crash there is reported, not treated as a product regression.
       - name: Instrumented tests (API 24, x86_64 emulator)
         id: emulator
         continue-on-error: true
