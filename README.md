@@ -90,7 +90,7 @@ reason each was left out of the core build.
 
 | Home | Reader | Contents | Search |
 |---|---|---|---|
-| Library with continue card | Full-bleed page, minimal chrome | Text-derived outline | Live full-text results |
+| Library with continue card | Full-bleed page, minimal chrome | Outline, bookmarks, thumbnails | Live full-text results |
 
 The interface is intentionally quiet: warm paper surfaces in light mode, ink navy in
 dark mode, and a single amber accent that marks progress, bookmarks and the active
