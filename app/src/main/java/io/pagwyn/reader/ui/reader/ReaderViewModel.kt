@@ -465,6 +465,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private companion object {
+        /** Pages measured at open time so the first screen lays out without a fetch. */
+        const val GEOMETRY_PRIME_PAGES = 24
+
         const val SEARCH_LIMIT = 200
         const val THUMBNAIL_WIDTH = 180
     }
