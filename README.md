@@ -197,8 +197,15 @@ See [docs/PRIVACY.md](docs/PRIVACY.md) and [docs/PERMISSIONS.md](docs/PERMISSION
 
 - **Android 7.0 (API 24)** through **Android 15 (API 35)**
 - **ARMv7 (`armeabi-v7a`)** and **ARM64 (`arm64-v8a`)**, plus x86/x86_64 emulators
-- Verified by CI: the release workflow prints the ABI table, `minSdk`, permission
-  list and signature of the produced APK.
+- Verified by CI: every build prints the native-library table, SDK levels,
+  permission list and signature of the produced APK, and runs the device suite on
+  Android 7.0 and Android 14.
+
+Android 7 has a known platform defect that Pagwyn works around explicitly:
+`PdfRenderer` can abort the process when pages are opened and closed repeatedly, when
+the renderer is closed during a render, or when a closed renderer is finalised. The
+mitigations and the crashes they fixed are documented in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Because Pagwyn ships no native code, there is no per-ABI APK to choose: the same
 universal APK runs everywhere. This is also why ARMv7 support cannot silently
@@ -207,8 +214,8 @@ regress through a native dependency update.
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 40+ JVM tests
-./gradlew connectedDebugAndroidTest   # instrumented tests (device/emulator)
+./gradlew testDebugUnitTest            # 42 JVM tests, no device needed
+./gradlew connectedDebugAndroidTest    # 37 device tests (emulator/device)
 ```
 
 - The PDF text engine is tested against **real PDF byte streams generated inside
@@ -216,7 +223,13 @@ regress through a native dependency update.
   multi-page ordering, `TJ` kerning arrays, escaped parentheses and scanned pages
   with no text layer.
 - Cache and model tests run under Robolectric.
-- Instrumented tests cover storage access, reader launch and settings persistence.
+- The device suite drives the real platform renderer through a real `content://` URI:
+  page counts, geometry, rendered pixels, navigation, saved position, resume,
+  configuration changes, search, bookmarks, the library database and settings
+  persistence.
+- CI runs that device suite on **two emulators per build — Android 14 (API 34) and
+  Android 7.0 (API 24)**. All 74 device tests pass on both. Every run posts the exact
+  counts, APK hashes and manifest inspection as a commit comment.
 
 See [docs/TESTING.md](docs/TESTING.md) for the full matrix and what is verified
 versus what requires a physical device.

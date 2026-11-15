@@ -96,11 +96,21 @@ Properties that matter:
 2. **Generation counter.** Any viewport change increments a counter; in-flight work
    checks it between pages and abandons itself. A fling across 500 pages does not
    queue 500 renders.
-3. **Single thread.** `PdfRenderer.openPage` is not thread safe. Confining the whole
-   engine to one thread is faster than locking and makes native memory predictable.
-4. **`try/finally` page handles.** Every `PdfRenderer.Page` is closed immediately
-   after use; running out of page handles is a classic PDF-reader crash.
-5. **Progressive quality.** The preview pass is roughly 10× cheaper than the sharp
+3. **Single thread, and nothing else may touch the renderer.** `PdfRenderer` is not
+   thread safe. Confining the whole engine to one thread is faster than locking, and
+   the UI is forbidden from calling it at all: page geometry is primed on the render
+   thread at open time and afterwards fetched asynchronously. Reading page sizes
+   inline while binding list items crashed the process inside `CPDF_Page::Load`.
+4. **The renderer owns its page handles.** Handles are cached per page (bounded to
+   eight) and never closed individually. On Android 7, `PdfRenderer.closePage`
+   double-frees the native page, and repeatedly opening and closing pages aborts inside
+   `CPDF_Page::Load`. Every native call also shares one lock, so `close()` cannot run
+   while a page is mid-render — closing concurrently aborted on the render thread.
+5. **Closed renderers stay reachable on Android 7.** There, `PdfRenderer.close()` frees
+   the native document but leaves the pointer behind, and the finalizer frees it a
+   second time, killing the app seconds later inside `FinalizerDaemon`. Pagwyn keeps a
+   bounded list of closed renderers on that platform so the finalizer never runs.
+6. **Progressive quality.** The preview pass is roughly 10× cheaper than the sharp
    pass, so a huge document feels responsive immediately after opening.
 
 ## 5. Memory model
@@ -112,7 +122,11 @@ Properties that matter:
   paperback page.
 - `evictRemote(min, max)` after every viewport change keeps only nearby pages.
 - Keys include the render width, so zooming produces a new entry rather than
-  stretching an old bitmap.
+  stretching an old bitmap, **and the document identity**, so page 3 of a newly opened
+  file can never be served from the previous file's cache.
+- Evicted entries are *dropped*, never recycled. A bitmap that a
+  hardware-accelerated view has already recorded cannot be safely recycled; dropping
+  the reference lets the GC reclaim it (Android 7+ keeps bitmaps on the Java heap).
 
 `PageRenderer.reserveBitmap()` refuses allocations that would exceed half the budget
 or 22 MB for a single bitmap, in which case the user keeps the preview image. The
