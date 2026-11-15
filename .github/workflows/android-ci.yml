@@ -293,7 +293,8 @@ jobs:
           parts.append("**classes**\n```\n" + ("\n".join(markers) or "(none ran)") + "\n```")
           for label, path, limit in (
               ("gradle test lines (API 24)", "/tmp/instrumented.log", 3000),
-              ("result xml (API 34)", "/tmp/xml-dump34.txt", 6000),
+              ("result xml (API 34)", "/tmp/xml-dump34.txt", 5000),
+              ("result xml (API 24)", "/tmp/xml-dump.txt", 5000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
           ):
               try:
