@@ -242,10 +242,12 @@ jobs:
               if label == "crashes":
                   keep = []
                   for line in text.splitlines():
+                      stripped = line.strip()
                       keyword = ("Fatal" in line or "FATAL" in line or "backtrace" in line
                                  or "Abort message" in line or "signal" in line
                                  or "pagwyn" in line.lower() or "Exception" in line
-                                 or "recycled" in line or line.strip().startswith("#"))
+                                 or "recycled" in line
+                                 or (stripped.startswith("#") and len(stripped) > 2))
                       if keyword:
                           keep.append(line[:200])
                   text = "\n".join(keep)
