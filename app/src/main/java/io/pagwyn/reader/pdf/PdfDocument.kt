@@ -66,10 +66,11 @@ class PdfDocument private constructor(
     /**
      * Descriptor kept open for the text engine.
      *
-     * `PdfRenderer` owns the rendering descriptor, and a descriptor number can be
-     * reused as soon as it is closed, so resolving `/proc/self/fd/<n>` for text would
-     * otherwise point at whichever document happened to take that number next. This
-     * descriptor stays open for the whole session, so the path stays correct.
+     * A descriptor number can be reused as soon as it is closed, so resolving
+     * `/proc/self/fd/<n>` for text through the renderer's descriptor would eventually
+     * point at whichever document took that number next (observed in practice: text was
+     * extracted from an unrelated file). This descriptor is owned by the document and
+     * stays open until [close], so the path always identifies this document.
      */
     private val textDescriptor: ParcelFileDescriptor?,
     /** True when [PdfTextService] reads from a temporary cache copy. */
@@ -78,7 +79,17 @@ class PdfDocument private constructor(
 
     val pageCount: Int = renderer.pageCount
 
+    /**
+     * Serialises every native call. `PdfRenderer` aborts the process (SIGSEGV, not an
+     * exception) if it is closed while another thread is inside `page.render()`, which
+     * is exactly what happens when the reader leaves mid-render. Every entry point
+     * therefore takes this lock, and [close] waits for the in-flight page.
+     */
+    private val lock = Any()
+
+    @Volatile
     private var closed = false
+
     private val dimensions = HashMap<Int, PageInfo>(pageCount.coerceAtMost(MAX_DIMENSION_CACHE))
 
     /**
@@ -86,6 +97,7 @@ class PdfDocument private constructor(
      * the native layer never runs out of page handles.
      */
     private inline fun <T> withPage(index: Int, block: (PdfRenderer.Page) -> T): T {
+        check(!closed) { "Document is closed" }
         val page = renderer.openPage(index)
         try {
             return block(page)
@@ -95,14 +107,16 @@ class PdfDocument private constructor(
     }
 
 
-    fun pageInfo(index: Int): PageInfo = dimensions.getOrPut(index) {
-        withPage(index) { page ->
-            PageInfo(
-                index = index,
-                widthPoints = page.width,
-                heightPoints = page.height,
-                rotation = 0,
-            )
+    fun pageInfo(index: Int): PageInfo = synchronized(lock) {
+        dimensions.getOrPut(index) {
+            withPage(index) { page ->
+                PageInfo(
+                    index = index,
+                    widthPoints = page.width,
+                    heightPoints = page.height,
+                    rotation = 0,
+                )
+            }
         }
     }
 
@@ -119,9 +133,10 @@ class PdfDocument private constructor(
         widthPx: Int,
         heightPx: Int,
         renderMode: Int = PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
-    ): Boolean {
+    ): Boolean = synchronized(lock) {
         if (closed) return false
-        return try {
+        if (index !in 0 until pageCount) return false
+        try {
             withPage(index) { page ->
                 // PdfRenderer requires the bitmap to match the requested size closely.
                 bitmap.eraseColor(Color.WHITE)
@@ -131,6 +146,8 @@ class PdfDocument private constructor(
         } catch (e: IllegalArgumentException) {
             false
         } catch (e: IllegalStateException) {
+            false
+        } catch (e: IndexOutOfBoundsException) {
             false
         }
     }
@@ -153,7 +170,7 @@ class PdfDocument private constructor(
 
     val hasTextLayer: Boolean get() = textService != null
 
-    override fun close() {
+    override fun close(): Unit = synchronized(lock) {
         if (closed) return
         closed = true
         runCatching { renderer.close() }
@@ -162,6 +179,7 @@ class PdfDocument private constructor(
         runCatching { textDescriptor?.close() }
         // Delete the temporary copy made for text extraction, if one was needed.
         if (textPathIsCopy) runCatching { PdfDependencyLoader.releaseCopy(textService?.filePath) }
+        Unit
     }
 
     companion object {
@@ -185,7 +203,7 @@ class PdfDocument private constructor(
             // A second, independent descriptor whose only job is to keep the raw bytes
             // readable for the text engine for as long as the document is open.
             PdfDependencyLoader.ensureLoaded(context)
-            val textDescriptor = openDescriptor(context, uri)
+            var textDescriptor = openDescriptor(context, uri)
             val fdPath = textDescriptor?.let { PdfTextService.descriptorPath(it) }
             // `statSize` is the authoritative size of the open document; it is used to
             // validate any /proc path before text extraction trusts it.
@@ -194,27 +212,39 @@ class PdfDocument private constructor(
                 PdfDependencyLoader.resolveReadablePath(context, uri, fdPath, descriptorSize)
             }.getOrNull()
             val textPathIsCopy = textPath != null && (fdPath == null || textPath != fdPath)
-            if (!textPathIsCopy) textDescriptor?.closeSafely()
+            if (textPathIsCopy) {
+                textDescriptor?.closeSafely()
+                textDescriptor = null
+            }
 
+            // The renderer takes over the descriptor and closes it on `close()`, so every
+            // failure path below must close the renderer first and must never close the
+            // descriptor itself: a double close desynchronises native code and can abort
+            // the process on the render thread.
             val renderer = try {
                 PdfRenderer(descriptor)
             } catch (e: SecurityException) {
+                textDescriptor?.closeSafely()
+                // The renderer never took ownership, so this descriptor is still ours.
                 descriptor.closeSafely()
                 throw PdfOpenException.NeedsPassword()
             } catch (e: IllegalStateException) {
+                textDescriptor?.closeSafely()
                 descriptor.closeSafely()
                 throw PdfOpenException.Corrupt()
             } catch (e: IOException) {
+                textDescriptor?.closeSafely()
                 descriptor.closeSafely()
                 throw PdfOpenException.Corrupt()
             } catch (e: OutOfMemoryError) {
+                textDescriptor?.closeSafely()
                 descriptor.closeSafely()
                 throw PdfOpenException.TooLarge()
             }
 
             if (renderer.pageCount <= 0) {
                 runCatching { renderer.close() }
-                descriptor.closeSafely()
+                textDescriptor?.closeSafely()
                 throw PdfOpenException.Corrupt()
             }
 
@@ -227,7 +257,7 @@ class PdfDocument private constructor(
                 descriptor = descriptor,
                 renderer = renderer,
                 textService = textService,
-                textDescriptor = if (textPathIsCopy) null else textDescriptor,
+                textDescriptor = textDescriptor,
                 textPathIsCopy = textPathIsCopy,
             )
         }
