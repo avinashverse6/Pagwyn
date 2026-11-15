@@ -424,10 +424,16 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     override fun onCleared() {
         onLeaving()
         renderer.listener = null
-        // Closing touches the native renderer and waits for an in-flight page, so it
-        // must not run on the main thread.
-        viewModelScope.launch(Dispatchers.IO) { renderer.close() }
         document = null
+        // The renderer must be closed off the main thread (close waits for an in-flight
+        // page), and it must be closed *reliably*: `viewModelScope` is already cancelled
+        // by the time `onCleared` runs, so a coroutine there would never execute and the
+        // native renderer would be reclaimed by a finalizer instead — which aborts the
+        // process. A short-lived daemon thread is the reliable option here.
+        Thread({ runCatching { renderer.close() } }, "pagwyn-render-close").apply {
+            isDaemon = true
+            start()
+        }
         super.onCleared()
     }
 
