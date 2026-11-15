@@ -424,7 +424,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     override fun onCleared() {
         onLeaving()
         renderer.listener = null
-        renderer.close()
+        // Closing touches the native renderer and waits for an in-flight page, so it
+        // must not run on the main thread.
+        viewModelScope.launch(Dispatchers.IO) { renderer.close() }
         document = null
         super.onCleared()
     }

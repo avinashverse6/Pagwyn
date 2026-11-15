@@ -341,19 +341,28 @@ class PageRenderer(
     /**
      * Releases the native renderer.
      *
-     * Closing happens on the render thread (via a submitted task, not a blocking
-     * wait) so a UI call never blocks on a page that is mid-render. The executor is
-     * shut down afterwards, which is safe even if tasks are still queued.
+     * The close is submitted to the render thread and then *waited for*, so callers
+     * know the document is gone when this returns. Waiting matters: `PdfRenderer`
+     * aborts the process if it is closed while another task is still finishing a page,
+     * and a partially shut-down executor can drop the close entirely and leak the
+     * file descriptor. The wait is bounded so a wedged render cannot block the UI.
      */
     override fun close() {
         if (!closing.compareAndSet(false, true)) return
+        val latch = java.util.concurrent.CountDownLatch(1)
         runCatching {
             executor.execute {
-                runCatching { document?.close() }
-                document = null
-                cache.clear()
+                try {
+                    closeInternal()
+                } finally {
+                    latch.countDown()
+                }
             }
-        }.onFailure { Log.w(TAG, "close scheduling failed", it) }
+        }.onFailure {
+            Log.w(TAG, "close scheduling failed", it)
+            latch.countDown()
+        }
+        runCatching { latch.await(CLOSE_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS) }
         runCatching { executor.shutdown() }
     }
 
@@ -377,6 +386,8 @@ class PageRenderer(
         private const val TAG = "PagwynRender"
 
         /** Preview renders are cheap: enough to read a heading while the sharp pass runs. */
+        private const val CLOSE_TIMEOUT_MS = 2_000L
+
         private const val PREVIEW_MAX_WIDTH = 720
         private const val PREVIEW_MIN_WIDTH = 320
 
