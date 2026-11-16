@@ -180,7 +180,7 @@
                         android:letterSpacing="0.14"
                         android:text="@string/home_continue_kicker"
                         android:textAllCaps="true"
-                        android:textColor="#FFFFFFFF"
+                        android:textColor="@color/on_hero"
                         android:textSize="11sp" />
 
                     <TextView
@@ -200,7 +200,7 @@
                         android:layout_marginTop="2dp"
                         android:alpha="0.9"
                         android:maxLines="1"
-                        android:textColor="#FFFFFFFF"
+                        android:textColor="@color/on_hero"
                         android:textSize="13sp"
                         tools:text="Page 42 of 380" />
                 </LinearLayout>
@@ -210,7 +210,7 @@
                     android:layout_height="24dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_chevron_right"
-                    android:tint="#FFFFFFFF" />
+                    android:tint="@color/on_hero" />
             </LinearLayout>
 
             <ProgressBar

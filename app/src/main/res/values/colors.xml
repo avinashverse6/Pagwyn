@@ -50,5 +50,9 @@
     <color name="scrim_light">#14000000</color>
     <color name="scrim_dark">#4D000000</color>
     <color name="transparent">#00000000</color>
+    <!-- Text and icons drawn on top of the generated gradient cover. -->
+    <color name="on_hero">#FFFFFFFF</color>
+    <color name="hero_track">#33FFFFFF</color>
+    <color name="dim_overlay">#FF000000</color>
     <color name="launcher_background">#FF0F0F12</color>
 </resources>
