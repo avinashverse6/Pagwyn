@@ -99,7 +99,7 @@ class ReaderInstrumentedTest {
     @Test
     fun recordsTheDocumentInTheLibrary() {
         val uri = TestDocuments.writePdf("recorded.pdf", listOf("first", "second"))
-        openPdf(uri) {
+        openPdf(uri) { scenario ->
             // The record is written on a background thread once the page count is known,
             // and trimHistory runs right after the insert, so this is eventually
             // consistent rather than immediately so.
