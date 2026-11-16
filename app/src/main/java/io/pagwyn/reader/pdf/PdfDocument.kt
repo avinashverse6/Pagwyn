@@ -42,15 +42,32 @@ sealed class PdfOpenException(message: String, cause: Throwable? = null) : Excep
  * native memory of their own once closed.
  */
 private object RetiredRenderers {
-    private const val MAX_RETAINED = 64
+    private const val TAG = "PagwynPdf"
 
-    private val retained = java.util.ArrayDeque<PdfRenderer>(MAX_RETAINED)
+    /**
+     * Kept forever, deliberately. Evicting an entry hands the object back to the
+     * garbage collector, whose finalizer closes the native document a second time —
+     * the very double free this object exists to prevent. Dropping old entries made
+     * the crash *worse and later*: the process survived the eviction and then died in
+     * `CPDF_Document::~CPDF_Document` inside a later, unrelated `close()`, because the
+     * heap had already been corrupted.
+     *
+     * A retired renderer is an inert Java object with no native memory attached, so the
+     * cost of keeping it is a few dozen bytes per document ever opened on Android 7.
+     */
+    private val retained = java.util.ArrayDeque<PdfRenderer>()
+
+    @Volatile
+    private var retired = 0
 
     fun retireIfNeeded(renderer: PdfRenderer) {
         if (android.os.Build.VERSION.SDK_INT > 24) return
         synchronized(retained) {
             retained.addLast(renderer)
-            while (retained.size > MAX_RETAINED) retained.removeFirst()
+            retired++
+            if (retired == 1 || retired % 25 == 0) {
+                android.util.Log.d(TAG, "retired $retired closed renderers (API 24)")
+            }
         }
     }
 }
@@ -230,6 +247,10 @@ class PdfDocument private constructor(
     override fun close(): Unit = synchronized(lock) {
         if (closed) return
         closed = true
+        android.util.Log.d(
+            "PagwynPdf",
+            "closing ${renderer.hashCode()} on ${Thread.currentThread().name}",
+        )
         runCatching { renderer.close() }
         RetiredRenderers.retireIfNeeded(renderer)
         runCatching { descriptor.close() }
