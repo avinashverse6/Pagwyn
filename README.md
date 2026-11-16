@@ -55,11 +55,11 @@ reason each was left out of the core build.
 ### Reading
 
 - Continuous vertical scrolling and single-page mode
-- Fit-to-width, fit-to-page and custom zoom (pinch, double-tap, buttons)
+- Fit-to-width and fit-to-page; pinch and double-tap zoom, centred on the pinch point
 - Smooth panning while zoomed, with per-page zoom state
 - Automatic control hiding; tap to bring the chrome back
 - Full-screen reading mode
-- Light, sepia and dark reading themes that never tint the page itself
+- One app-wide theme — System, Light or Dark — that applies to every screen, live
 - Adjustable page spacing and a dimming overlay for night reading
 - Portrait and landscape, with page rotation
 - Optional keep-screen-on
@@ -80,7 +80,6 @@ reason each was left out of the core build.
 - Full-text search with snippets and jump-to-result
 - Table of contents derived from the document's own text layer
 - Page bookmarks
-- Page thumbnails
 - Copy page text to the clipboard
 - Native Android sharing
 - Opens PDFs from other apps (`VIEW` and `SEND` intents)
@@ -90,11 +89,21 @@ reason each was left out of the core build.
 
 | Home | Reader | Contents | Search |
 |---|---|---|---|
-| Library with continue card | Full-bleed page, minimal chrome | Outline, bookmarks, thumbnails | Live full-text results |
+| Library with continue card | Full-bleed page, minimal chrome | Outline and bookmarks | Live full-text results |
 
-The interface is intentionally quiet: warm paper surfaces in light mode, ink navy in
-dark mode, and a single amber accent that marks progress, bookmarks and the active
-action.
+The interface is dark-first and deliberately quiet: near-black surfaces, soft off-white
+text and one lime accent that marks progress, bookmarks and the active action. The light
+theme uses warm off-white paper. Rounded cards, pill-shaped chips and a floating reader
+bar carry the shape language; there is no Material Components dependency, no image
+library and no font file.
+
+### Reader menu and bottom bar
+
+The three-dot menu holds everything that acts on the document — Bookmarks, Go to page,
+Theme, Full-screen reading, Keep screen on, Copy text, Share document and Document
+information. The floating bottom bar holds navigation and reading controls only:
+Contents, previous/next page with a tappable "3 / 12" indicator, and fit-to-width.
+Nothing appears in both places.
 
 ## Install
 

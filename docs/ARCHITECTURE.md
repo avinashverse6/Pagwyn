@@ -207,10 +207,31 @@ only thing included in cloud backup — never the PDF files.
 Material Components (buttons, `BottomSheetDialogFragment`, chips, sliders) would add
 roughly 600 KB of resources and a dependency tree to the APK for interactions that
 are simple to express with AppCompat themes, `PopupMenu` and a small dialog-based
-sheet. Pagwyn's visual identity is custom anyway (paper/ink/amber), so the Material
-theme was not doing the design work either.
+sheet. Pagwyn's visual identity is custom anyway (near-black ink surfaces, lime accent
+and warm paper in light mode), so the Material theme was not doing the design work
+either.
+
+Shapes come from `GradientDrawable` and vector drawables built at runtime; gradients on
+the continue-reading card are drawn by `CoverArtwork` from a hash of the file name, so
+every document has a stable colour pair without shipping a single image.
 
 The result is a consistent, deliberately quiet UI that starts fast and installs small.
+
+## 10a. Theme resolution and typography
+
+One preference — `Settings.theme`, System/Light/Dark — drives the whole application.
+`ThemeApplier.apply` runs in `PagwynApplication.onCreate`, before any activity is
+created, so the first frame is already correct and there is no flash. Changing the theme
+from Settings or from the reader's menu updates the stored value and then calls
+`recreate()`, which re-reads it.
+
+Typography uses the system sans-serif face only: no font files are bundled and **no
+style sets `android:fontFamily`**. Weight comes from `android:textStyle`. This is not
+only a size decision: on Android 7 an `android:fontFamily` item reaches
+`TypedArray.getString` during `TextView` construction, and the platform resource pool
+lookup throws `ArrayIndexOutOfBoundsException` for some layouts. Because every
+`Text.Pagwyn.*` style previously carried a family, any screen using those styles crashed
+on API 24. Keeping families out of resources avoids that code path entirely.
 
 ## 11. Optional features
 

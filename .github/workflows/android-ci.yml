@@ -23,7 +23,7 @@ jobs:
   build:
     name: Build & verify
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dkotlin.incremental=false"
     steps:

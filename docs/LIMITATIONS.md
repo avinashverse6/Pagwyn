@@ -12,7 +12,9 @@ like a working feature.
 | OCR for scanned documents | Tens of megabytes of native engine and models; incompatible with the APK-size and ARMv7 goals. Scanned pages simply have no text layer, and Pagwyn says so instead of showing an empty search. |
 | Editing, reordering, merging, splitting PDFs | Pagwyn is a reader. |
 | Cloud sync, accounts, bookmarks across devices | Contradicts the offline/privacy model. |
-| Night-mode colour inversion of page content | Would alter the document. Pagwyn provides sepia/dark *surroundings* and a dimming overlay, never a tinted page. |
+| Night-mode colour inversion of page content | Would alter the document. Pagwyn provides dark *surroundings* and a dimming overlay, never a tinted page. |
+| Sepia page tint (the old "reading theme") | Removed. It tinted the paper without helping legibility, and the app-wide theme plus the dimming overlay cover the same need. |
+| Page thumbnail grid | Removed. A second browsing surface duplicated the contents sheet and the page indicator; the reader now has exactly one way to reach a page. |
 
 ## Platform constraints
 
