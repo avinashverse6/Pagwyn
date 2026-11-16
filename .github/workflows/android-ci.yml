@@ -81,6 +81,7 @@ jobs:
                       )
           for label, path in (
               ("unit test output", "/tmp/unit-tests.log"),
+              ("instrumented compile output", "/tmp/android-test-compile.log"),
           ):
               try:
                   text = open(path, errors="replace").read()
@@ -119,6 +120,14 @@ jobs:
 
       - name: Assemble debug
         run: ./gradlew assembleDebug --stacktrace
+
+      # Compile the instrumented sources before spending ten minutes on emulators.
+      # A compile error there used to produce a completely empty result set on both
+      # devices, which reads exactly like "every test class failed".
+      - name: Compile instrumented tests
+        run: |
+          set -o pipefail
+          ./gradlew compileDebugAndroidTestKotlin --stacktrace 2>&1 | tee /tmp/android-test-compile.log
 
       - name: Assemble release
         run: ./gradlew assembleRelease --stacktrace

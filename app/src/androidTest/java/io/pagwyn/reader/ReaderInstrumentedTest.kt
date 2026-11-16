@@ -58,8 +58,7 @@ class ReaderInstrumentedTest {
                 throw AssertionError(
                     "document never opened; loading=${state.loading} pages=${state.pageCount} " +
                         "error=${state.error}",
-                    failure,
-                )
+                ).apply { initCause(failure) }
             }
             block(scenario)
         }
@@ -122,8 +121,7 @@ class ReaderInstrumentedTest {
                     "document not recorded within 45s; store=${document} " +
                         "state=${lastState?.let { "loading=${it.loading} pages=${it.pageCount} error=${it.error}" }} " +
                         "lastUri=${settings.lastDocumentUri}",
-                    recorded.exceptionOrNull(),
-                )
+                ).apply { initCause(recorded.exceptionOrNull()) }
             }
             assertEquals(
                 "document should be recorded with its page count: $document",
