@@ -293,7 +293,7 @@ jobs:
                         print(f"=== {case.get('classname')}#{case.get('name')}")
                         print((child.get('message') or '').strip()[:400])
                         body = (child.text or '').strip().splitlines()
-                        print("\n".join(line[:300] for line in body[:14]))
+                        print("\n".join(line[:300] for line in body[:40]))
                         print()
             PYFAILS34
             cat /tmp/pagwyn-results-34/pdf-crash.txt /tmp/pagwyn-results-34/reader-crash.txt /tmp/pagwyn-results-34/home-crash.txt /tmp/pagwyn-results-34/settings-crash.txt > /tmp/pagwyn-results-34/crashes.txt 2>/dev/null
@@ -363,7 +363,7 @@ jobs:
                         print(f"=== {case.get('classname')}#{case.get('name')}")
                         print((child.get('message') or '').strip()[:400])
                         body = (child.text or '').strip().splitlines()
-                        print("\n".join(line[:300] for line in body[:14]))
+                        print("\n".join(line[:300] for line in body[:40]))
                         print()
             PYFAILS24
             cat /tmp/pagwyn-results/pdf-crash.txt /tmp/pagwyn-results/reader-crash.txt /tmp/pagwyn-results/home-crash.txt /tmp/pagwyn-results/settings-crash.txt > /tmp/pagwyn-results/crashes.txt 2>/dev/null
@@ -556,7 +556,7 @@ jobs:
                           if child.tag not in ('failure', 'error'):
                               continue
                           detail = ((child.text or '') + (child.get('message') or '')).strip().splitlines()
-                          lines += [f"`{case.get('name')}`:"] + [f"    {d.strip()[:220]}" for d in detail[:6]] + [""]
+                          lines += [f"`{case.get('name')}`:"] + [f"    {d.strip()[:220]}" for d in detail[:25]] + [""]
           body = json.dumps({"body": "\n".join(lines)})
           req = urllib.request.Request(
               f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
