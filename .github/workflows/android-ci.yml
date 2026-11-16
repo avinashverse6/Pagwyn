@@ -58,63 +58,6 @@ jobs:
           set -o pipefail
           ./gradlew testDebugUnitTest --stacktrace 2>&1 | tee /tmp/unit-tests.log
 
-      - name: Post failure diagnostics
-        if: failure()
-        run: |
-          python3 - <<'PYFAIL'
-          import json, os, urllib.request
-          import glob, xml.etree.ElementTree as ET
-          parts = []
-          # JUnit XML carries the assertion message, which the console log omits.
-          for xml_path in glob.glob("/home/runner/work/*/*/app/build/test-results/testDebugUnitTest/*.xml"):
-              try:
-                  tree = ET.parse(xml_path)
-              except Exception:
-                  continue
-              for case in tree.iter("testcase"):
-                  for failure in list(case.findall("failure")) + list(case.findall("error")):
-                      message = (failure.get("message") or "").strip()
-                      text = (failure.text or "").strip().splitlines()
-                      parts.append(
-                          f"**{case.get('classname','?')} > {case.get('name','?')}**\n"
-                          f"```\n{message}\n" + "\n".join(text[:12]) + "\n```"
-                      )
-          for label, path in (
-              ("unit test output", "/tmp/unit-tests.log"),
-              ("instrumented compile output", "/tmp/android-test-compile.log"),
-          ):
-              try:
-                  text = open(path, errors="replace").read()
-              except OSError:
-                  continue
-              # Compiler errors and assertion failures only: full logs are huge.
-              keep = [
-                  line for line in text.splitlines()
-                  if line.startswith("e: ") or ": error:" in line
-                  or "FAILED" in line or line.startswith("> Task")
-                  or "Unresolved reference" in line or line.startswith("Caused by")
-              ]
-              if keep:
-                  parts.append(f"**{label}**\n```\n" + "\n".join(keep[:200]) + "\n```")
-          if not parts:
-              parts.append("_No diagnostics captured (the failure happened before the build). _")
-          body = json.dumps({"body": "### Build failure\n\n" + "\n\n".join(parts)})
-          req = urllib.request.Request(
-              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
-              data=body.encode(),
-              headers={
-                  "Authorization": f"token {os.environ['GH_TOKEN']}",
-                  "Accept": "application/vnd.github+json",
-                  "Content-Type": "application/json",
-              },
-          )
-          urllib.request.urlopen(req).read()
-          PYFAIL
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
-
       - name: Lint
         run: ./gradlew lintDebug --stacktrace || true
 
@@ -593,6 +536,64 @@ jobs:
             app/build/outputs/androidTest-results/**
           retention-days: 7
           if-no-files-found: ignore
+
+      - name: Post failure diagnostics
+        if: failure()
+        # Runs late so it also catches an instrumented-compile failure.
+        run: |
+          python3 - <<'PYFAIL'
+          import json, os, urllib.request
+          import glob, xml.etree.ElementTree as ET
+          parts = []
+          # JUnit XML carries the assertion message, which the console log omits.
+          for xml_path in glob.glob("/home/runner/work/*/*/app/build/test-results/testDebugUnitTest/*.xml"):
+              try:
+                  tree = ET.parse(xml_path)
+              except Exception:
+                  continue
+              for case in tree.iter("testcase"):
+                  for failure in list(case.findall("failure")) + list(case.findall("error")):
+                      message = (failure.get("message") or "").strip()
+                      text = (failure.text or "").strip().splitlines()
+                      parts.append(
+                          f"**{case.get('classname','?')} > {case.get('name','?')}**\n"
+                          f"```\n{message}\n" + "\n".join(text[:12]) + "\n```"
+                      )
+          for label, path in (
+              ("unit test output", "/tmp/unit-tests.log"),
+              ("instrumented compile output", "/tmp/android-test-compile.log"),
+          ):
+              try:
+                  text = open(path, errors="replace").read()
+              except OSError:
+                  continue
+              # Compiler errors and assertion failures only: full logs are huge.
+              keep = [
+                  line for line in text.splitlines()
+                  if line.startswith("e: ") or ": error:" in line
+                  or "FAILED" in line or line.startswith("> Task")
+                  or "Unresolved reference" in line or line.startswith("Caused by")
+              ]
+              if keep:
+                  parts.append(f"**{label}**\n```\n" + "\n".join(keep[:200]) + "\n```")
+          if not parts:
+              parts.append("_No diagnostics captured (the failure happened before the build). _")
+          body = json.dumps({"body": "### Build failure\n\n" + "\n\n".join(parts)})
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=body.encode(),
+              headers={
+                  "Authorization": f"token {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PYFAIL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
 
       - name: Upload APKs
         uses: actions/upload-artifact@v7
