@@ -231,6 +231,10 @@ jobs:
       - name: Instrumented tests (API 34, x86_64 emulator)
         id: emulator34
         uses: ReactiveCircus/android-emulator-runner@v2
+        # Report-only at the action level: the emulator's own exit status reflects its
+        # lifecycle as much as the tests. "Gate on API 34 instrumented results" below is
+        # the step that decides, and it runs even when this one fails.
+        continue-on-error: true
         with:
           api-level: 34
           # `default` (AOSP) images do not include Google Play services, so they boot
