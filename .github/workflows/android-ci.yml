@@ -354,7 +354,7 @@ jobs:
               ("emulator tail (API 34)", "/tmp/emulator34-tail.txt", 3000),
               ("test failures (API 34)", "/tmp/failures34.txt", 5000),
               ("test failures (API 24)", "/tmp/failures.txt", 5000),
-              ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 6000),
+              ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 12000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
           ):
               try:
@@ -369,6 +369,7 @@ jobs:
                       keyword = ("Fatal" in line or "FATAL" in line or "backtrace" in line
                                  or "Abort message" in line or "signal" in line
                                  or "pagwyn" in line.lower() or "Exception" in line
+                                 or "PagwynTest" in line
                                  or "recycled" in line
                                  or " pc " in line or "#00" in line or "#01" in line
                                  or "#02" in line or "#03" in line or "#04" in line

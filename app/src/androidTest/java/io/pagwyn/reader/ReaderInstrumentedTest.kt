@@ -116,7 +116,11 @@ class ReaderInstrumentedTest {
                     document?.pageCount == 2
                 }
             }
+            TestDiagnostics.log("library record; store=$document uri=$uri")
             if (recorded.isFailure) {
+                TestDiagnostics.log(
+                    "document not recorded within 45s; store=$document lastUri=${settings.lastDocumentUri}",
+                )
                 throw AssertionError(
                     "document not recorded within 45s; store=${document} " +
                         "state=${lastState?.let { "loading=${it.loading} pages=${it.pageCount} error=${it.error}" }} " +

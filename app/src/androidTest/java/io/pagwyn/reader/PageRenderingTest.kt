@@ -76,7 +76,9 @@ class PageRenderingTest {
                 if (drawn == null) Thread.sleep(50)
             }
             if (drawn == null) {
-                throw AssertionError("first page never drawn within 45s; last state: $state")
+                val message = "first page never drawn within 45s; last state: $state"
+                TestDiagnostics.log(message)
+                throw AssertionError(message)
             }
             // The placeholder must be gone; otherwise the user still sees "Rendering…".
             scenario.onActivity { activity ->
@@ -86,6 +88,7 @@ class PageRenderingTest {
                 assertTrue("a rendered page must report content", slot!!.hasContent())
                 assertFalse("a rendered page must not show the error state", slot.isShowingError())
             }
+            TestDiagnostics.log("first page drawn; state: $state")
             val bitmap = drawn
             assertNotNull("the first page must be drawn, not left on a placeholder", bitmap)
             assertTrue("the drawn page must contain actual content", hasInk(bitmap!!))
