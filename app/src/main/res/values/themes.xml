@@ -96,6 +96,21 @@
         <item name="android:textColor">?attr/pwOnSurfaceMuted</item>
     </style>
 
+    <!-- Card titles: same weight as Label, but sized for a two-column grid. -->
+    <style name="Text.Pagwyn.CardTitle" parent="">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/pwOnSurface</item>
+    </style>
+
+    <!-- Hero title on the continue-reading card (white on the gradient cover). -->
+    <style name="Text.Pagwyn.HeroTitle" parent="">
+        <item name="android:textSize">19sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+
     <style name="Text.Pagwyn.Label" parent="">
         <item name="android:textSize">14sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>

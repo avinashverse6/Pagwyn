@@ -185,15 +185,12 @@
 
                     <TextView
                         android:id="@+id/continueTitle"
+                        style="@style/Text.Pagwyn.HeroTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:ellipsize="end"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="-0.01"
                         android:maxLines="2"
-                        android:textColor="#FFFFFFFF"
-                        android:textSize="19sp"
                         tools:text="Deep Work" />
 
                     <TextView

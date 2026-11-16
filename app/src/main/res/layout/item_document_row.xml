@@ -28,10 +28,10 @@
 
         <TextView
             android:id="@+id/rowTitle"
+            style="@style/Text.Pagwyn.CardTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
             android:maxLines="1"
             android:textColor="?attr/pwOnSurface"
             android:textSize="15sp"

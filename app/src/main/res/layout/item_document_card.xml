@@ -23,15 +23,13 @@
 
     <TextView
         android:id="@+id/cardTitle"
+        style="@style/Text.Pagwyn.CardTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_3"
         android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
         android:maxLines="2"
         android:minLines="1"
-        android:textColor="?attr/pwOnSurface"
-        android:textSize="14sp"
         tools:text="Deep Work" />
 
     <TextView
