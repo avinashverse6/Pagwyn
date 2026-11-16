@@ -104,4 +104,4 @@ called done:
 | Real storage providers (Downloads, Drive, OneDrive) | The suite uses a test `FileProvider`, whose behaviour differs from providers that stream or re-grant access. |
 | AMOLED true black | Only meaningful on an OLED panel. |
 | Battery impact of the dimming overlay | Requires a physical screen. |
-| The API 24 native pdfium fault | Reproduces in the emulator image when a run opens a dozen documents back to back. Whether it also affects real Android 7 hardware, and at what rate, is unknown. Pagwyn keeps at most one document open per session to minimise the exposure. |
+| The API 24 native pdfium fault | Reproduces in the emulator image when a run opens a dozen documents back to back, in `CPDF_Page::Load` / `CPDF_Document::~CPDF_Document`. Application logging confirms every renderer is closed exactly once, and the same suite passes on API 34. Whether real Android 7 hardware is affected, and at what rate, is unknown; Pagwyn keeps one document open per reader session to minimise exposure. |
