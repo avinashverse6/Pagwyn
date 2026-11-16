@@ -234,14 +234,14 @@ jobs:
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results-34/home-crash.txt 2>&1
             # The main buffer carries the app's own diagnostics (PDF close/render); the crash
             # buffer only has the tombstone.
-            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V >> /tmp/pagwyn-results-34/home-crash.txt 2>&1
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results-34/home-app.txt 2>&1
             adb logcat -c
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace > /tmp/log34-settings.txt 2>&1 && touch /tmp/pagwyn-results-34/settings.pass || touch /tmp/pagwyn-results-34/settings.fail
             mkdir -p /tmp/pagwyn-results-34/settings && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results-34/settings/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results-34/settings-crash.txt 2>&1
             # The main buffer carries the app's own diagnostics (PDF close/render); the crash
             # buffer only has the tombstone.
-            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V >> /tmp/pagwyn-results-34/settings-crash.txt 2>&1
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results-34/settings-app.txt 2>&1
             adb logcat -c
             ls /tmp/pagwyn-results-34
             cat /tmp/log34-pdf.txt /tmp/log34-reader.txt /tmp/log34-home.txt /tmp/log34-settings.txt > /tmp/instrumented34.log
@@ -300,18 +300,26 @@ jobs:
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest,io.pagwyn.reader.LayoutInflationTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
             mkdir -p /tmp/pagwyn-results/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/pdf-crash.txt 2>&1
+            # The main buffer holds the app's own close/render diagnostics.
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/pdf-app.txt 2>&1
             adb logcat -c
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace > /tmp/log-reader.txt 2>&1 && touch /tmp/pagwyn-results/reader.pass || touch /tmp/pagwyn-results/reader.fail
             mkdir -p /tmp/pagwyn-results/reader && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/reader/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/reader-crash.txt 2>&1
+            # The main buffer holds the app's own close/render diagnostics.
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/reader-app.txt 2>&1
             adb logcat -c
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.HomeLibraryTest --stacktrace > /tmp/log-home.txt 2>&1 && touch /tmp/pagwyn-results/home.pass || touch /tmp/pagwyn-results/home.fail
             mkdir -p /tmp/pagwyn-results/home && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/home/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/home-crash.txt 2>&1
+            # The main buffer holds the app's own close/render diagnostics.
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/home-app.txt 2>&1
             adb logcat -c
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.SettingsPersistenceTest --stacktrace > /tmp/log-settings.txt 2>&1 && touch /tmp/pagwyn-results/settings.pass || touch /tmp/pagwyn-results/settings.fail
             mkdir -p /tmp/pagwyn-results/settings && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/settings/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/settings-crash.txt 2>&1
+            # The main buffer holds the app's own close/render diagnostics.
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/settings-app.txt 2>&1
             adb logcat -c
             ls /tmp/pagwyn-results
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
@@ -366,7 +374,7 @@ jobs:
               ("emulator tail (API 34)", "/tmp/emulator34-tail.txt", 3000),
               ("test failures (API 34)", "/tmp/failures34.txt", 5000),
               ("test failures (API 24)", "/tmp/failures.txt", 5000),
-              ("app log (API 24)", "/tmp/pagwyn-results/pdf-app.txt", 6000),
+              ("app log (API 24, pdf)", "/tmp/pagwyn-results/pdf-app.txt", 8000),
               ("app log (API 24, reader)", "/tmp/pagwyn-results/reader-app.txt", 4000),
               ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 12000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
