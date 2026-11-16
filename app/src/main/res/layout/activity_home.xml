@@ -307,13 +307,19 @@
             android:paddingEnd="@dimen/space_8"
             android:visibility="gone">
 
-            <TextView
+            <FrameLayout
                 android:layout_width="96dp"
                 android:layout_height="96dp"
-                android:background="@drawable/bg_empty_badge"
-                android:gravity="center"
-                android:text="📚"
-                android:textSize="40sp" />
+                android:background="@drawable/bg_empty_badge">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_empty_library"
+                    android:tint="?attr/pwPrimary" />
+            </FrameLayout>
 
             <TextView
                 style="@style/Text.Pagwyn.Title"

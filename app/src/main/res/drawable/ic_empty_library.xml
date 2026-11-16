@@ -1,0 +1,25 @@
+<!--
+  Empty-state illustration: an open book with a soft accent. Drawn as a vector rather
+  than an emoji so it renders identically on Android 7 (many API 24 images ship no
+  emoji font) and so it inherits the theme tint.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6 12.5 C11 10 17 10 24 13.5 C31 10 37 10 42 12.5 L42 35.5 C37 33 31 33 24 36.5 C17 33 11 33 6 35.5 Z" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M24 13.5 L24 36.5" />
+</vector>

@@ -53,7 +53,10 @@ class PageRenderingTest {
 
         ActivityScenario.launch<ReaderActivity>(ReaderActivity.intent(context, uri)).use { scenario ->
             var drawn: Bitmap? = null
-            waitUntil {
+            // The API 24 emulator image renders the first page an order of magnitude
+            // slower than API 34; a short timeout there reports "never drawn" for a
+            // page that is merely still rendering.
+            waitUntil(timeoutMs = 45_000) {
                 scenario.onActivity { activity ->
                     val list = activity.findViewById<RecyclerView>(R.id.pageList)
                     val slot = list.findViewHolderForAdapterPosition(0)?.itemView as? PageSlotView

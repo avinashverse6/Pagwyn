@@ -353,7 +353,7 @@ jobs:
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
             python3 - <<'PYFAILS24' > /tmp/failures.txt 2>/dev/null || true
             import glob, xml.etree.ElementTree as ET
-            for path in glob.glob('/tmp/pagwyn-results/**/TEST-*.xml', recursive=True):
+            for path in glob.glob('/tmp/pagwyn-results-*/**/TEST-*.xml', recursive=True):
                 try:
                     root = ET.parse(path).getroot()
                 except Exception:
