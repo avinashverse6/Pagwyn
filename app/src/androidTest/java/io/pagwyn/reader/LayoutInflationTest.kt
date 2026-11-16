@@ -2,6 +2,7 @@ package io.pagwyn.reader
 
 import android.view.LayoutInflater
 import android.view.View
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertTrue
@@ -19,7 +20,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LayoutInflationTest {
 
-    private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    // Screens are always inflated by an activity, so the layout must be inflated with
+    // the app theme. An application context would fail on the first `?attr/pwSurface`.
+    private val context get() = ContextThemeWrapper(
+        InstrumentationRegistry.getInstrumentation().targetContext,
+        R.style.Theme_Pagwyn,
+    )
     private val inflater get() = LayoutInflater.from(context)
 
     private fun inflate(id: Int, name: String) {
@@ -31,7 +37,11 @@ class LayoutInflationTest {
         try {
             inflate(id, name)
         } catch (failure: Throwable) {
-            failures += "$name: ${failure.javaClass.simpleName}: ${failure.message}"
+            val causes = generateSequence(failure) { it.cause }
+                .map { "${it.javaClass.simpleName}: ${it.message}" }
+                .distinct()
+                .joinToString(" <- ")
+            failures += "$name: $causes"
         }
     }
 
