@@ -62,6 +62,28 @@ done by the platform and is always accurate.
 Page rotation is a view-level operation (0/90/180/270), which keeps it instant. It is
 remembered per document. It does not modify the PDF file.
 
+### Android 7 (API 24) and the platform PDF renderer
+
+`android.graphics.pdf.PdfRenderer` on Android 7 is the least robust version of that
+API. Two consequences are known and handled:
+
+- **Double close of the native document.** `PdfRenderer.doClose()` on API 24 never
+  clears its native pointer, and `finalize()` closes it again when the object is
+  collected, which frees the underlying pdfium document twice and aborts the process.
+  Pagwyn keeps every closed renderer reachable for the lifetime of the process on
+  API 24 so the finaliser never runs. Retired renderers are inert Java objects, so the
+  cost is a few dozen bytes per document opened.
+- **Native instability under rapid open/close cycles.** Opening and closing many
+  documents in quick succession can still make pdfium itself fault inside the emulator
+  image (`CPDF_Page::Load`, `CPDF_Document::~CPDF_Document`). Pagwyn cannot intercept a
+  native fault; it keeps the number of open documents low (one per reader session) and
+  closes them off the main thread. On the API 24 emulator this reproduces only when a
+  single test run opens a dozen documents back to back, and the same suite passes on
+  API 34. Real-world use opens one document at a time.
+- A render failure that *is* catchable is always reported: the page shows
+  "Page N could not be rendered" with a **Retry** action. There is no state in which a
+  page waits forever.
+
 ## Environment-specific
 
 | Situation | Behaviour |

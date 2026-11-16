@@ -37,7 +37,6 @@
         <item name="pwDanger">@color/danger_dark</item>
         <item name="pwReaderBackground">@color/reader_dark</item>
         <item name="pwToolbarBackground">@color/ink_850</item>
-        <item name="pwThumbBackground">@color/ink_800</item>
         <item name="pwScrim">@color/scrim_dark</item>
         <item name="pwRipple">#24FFFFFF</item>
     </style>

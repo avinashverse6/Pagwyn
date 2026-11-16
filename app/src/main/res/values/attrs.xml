@@ -20,7 +20,6 @@
     <attr name="pwDanger" format="color" />
     <attr name="pwReaderBackground" format="color" />
     <attr name="pwToolbarBackground" format="color" />
-    <attr name="pwThumbBackground" format="color" />
     <attr name="pwScrim" format="color" />
     <attr name="pwRipple" format="color" />
 </resources>

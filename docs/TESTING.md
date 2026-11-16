@@ -3,7 +3,7 @@
 ## How to run
 
 ```bash
-./gradlew testDebugUnitTest          # 40 JVM tests, no device needed
+./gradlew testDebugUnitTest          # 51 JVM tests, no device needed
 ./gradlew connectedDebugAndroidTest  # instrumented tests, needs a device/emulator
 ./gradlew lintDebug                  # static analysis
 ```
@@ -17,11 +17,15 @@ Reports:
 
 | Suite | Tests | Result |
 |---|---|---|
-| JVM unit tests | 42 | **All passing** (verified on every CI build) |
+| JVM unit tests | 51 | **All passing** (verified on every CI build) |
 | Robolectric tests | included above | Passing |
-| Instrumented tests | 37, four classes | **All 37 passing on both Android 14 (API 34) and Android 7.0 (API 24)** |
+| Instrumented tests | 98 across both devices | **All passing on Android 14 (API 34)**; on Android 7.0 (API 24) all classes pass except one test in `ReaderInstrumentedTest`, which is limited by a native pdfium fault in the emulator image — see `docs/LIMITATIONS.md` |
 
-Both device suites run automatically on emulators in CI, 74 device tests per build:
+`LayoutInflationTest` inflates every screen layout on the device. Android 7 aborts
+inflation of a `TextView` whose attribute set it cannot resolve from the resource pool,
+and that failure cannot be reproduced on the JVM, so it is checked on both emulators.
+
+Both device suites run automatically on emulators in CI:
 
 - **API 34 (Android 14)** — the gating run. Stable image, modern rendering path
   (hardware accelerated rendering, scoped storage, predictive back).

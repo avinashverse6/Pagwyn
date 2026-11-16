@@ -93,7 +93,6 @@
     <string name="reader_open_failed">Could not open this document</string>
     <string name="reader_keep_screen_on">Keep screen on</string>
     <string name="reader_fullscreen">Full-screen reading</string>
-    <string name="reader_thumbnails">Page thumbnails</string>
     <string name="reader_jump_back">Back to page %1$d</string>
     <string name="reader_percent">%1$d%% read</string>
     <string name="reader_next_page">Next page</string>
@@ -185,7 +184,6 @@
     <string name="cd_more_options">More options</string>
     <string name="cd_close">Close</string>
     <string name="cd_toggle_controls">Show or hide reading controls</string>
-    <string name="cd_thumbnail">Page thumbnail</string>
     <string name="error_no_app">No app can open this file</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
     <string name="error_open_pdf_only">That file is not a PDF.</string>

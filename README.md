@@ -105,6 +105,11 @@ information. The floating bottom bar holds navigation and reading controls only:
 Contents, previous/next page with a tappable "3 / 12" indicator, and fit-to-width.
 Nothing appears in both places.
 
+## Recent changes
+
+See [CHANGELOG.md](CHANGELOG.md) for the reader, theme and interface overhaul, and for
+the short list of things that could not be verified without a physical device.
+
 ## Install
 
 1. Download `pagwyn-release.apk` from the [latest release](../../releases/latest).
