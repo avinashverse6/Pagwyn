@@ -49,7 +49,18 @@ class ReaderInstrumentedTest {
     private fun openPdf(uri: Uri, block: (ActivityScenario<ReaderActivity>) -> Unit = {}) {
         ActivityScenario.launch<ReaderActivity>(ReaderActivity.intent(context, uri)).use { scenario ->
             instrumentation.waitForIdleSync()
-            waitUntil { stateOf(scenario).let { it.pageCount > 0 || it.error != null } }
+            // Opening a PDF on the API 24 image is far slower than on API 34; the wait
+            // is condition-based, so a generous bound costs nothing on a fast device.
+            runCatching {
+                waitUntil(30_000) { stateOf(scenario).let { it.pageCount > 0 || it.error != null } }
+            }.onFailure { failure ->
+                val state = stateOf(scenario)
+                throw AssertionError(
+                    "document never opened; loading=${state.loading} pages=${state.pageCount} " +
+                        "error=${state.error}",
+                    failure,
+                )
+            }
             block(scenario)
         }
     }
@@ -94,9 +105,25 @@ class ReaderInstrumentedTest {
             // and trimHistory runs right after the insert, so this is eventually
             // consistent rather than immediately so.
             var document: io.pagwyn.reader.core.PagwynDocument? = null
-            waitUntil(15_000) {
-                document = store.find(uri)
-                document?.pageCount == 2
+            var lastState: io.pagwyn.reader.ui.reader.ReaderState? = null
+            // Generous on purpose: this runs on the API 24 image, where opening a PDF
+            // takes an order of magnitude longer than on API 34. The message below
+            // reports the reader state at the moment of failure, so a timeout says
+            // whether the document never opened or merely never reached the store.
+            val recorded = runCatching {
+                waitUntil(45_000) {
+                    document = store.find(uri)
+                    lastState = stateOf(scenario)
+                    document?.pageCount == 2
+                }
+            }
+            if (recorded.isFailure) {
+                throw AssertionError(
+                    "document not recorded within 45s; store=${document} " +
+                        "state=${lastState?.let { "loading=${it.loading} pages=${it.pageCount} error=${it.error}" }} " +
+                        "lastUri=${settings.lastDocumentUri}",
+                    recorded.exceptionOrNull(),
+                )
             }
             assertEquals(
                 "document should be recorded with its page count: $document",

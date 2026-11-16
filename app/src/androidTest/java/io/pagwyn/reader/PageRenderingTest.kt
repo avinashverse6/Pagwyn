@@ -53,19 +53,30 @@ class PageRenderingTest {
 
         ActivityScenario.launch<ReaderActivity>(ReaderActivity.intent(context, uri)).use { scenario ->
             var drawn: Bitmap? = null
+            var state = "not sampled"
             // The API 24 emulator image renders the first page an order of magnitude
             // slower than API 34; a short timeout there reports "never drawn" for a
             // page that is merely still rendering.
-            waitUntil(timeoutMs = 45_000) {
+            val deadline = System.currentTimeMillis() + 45_000
+            while (System.currentTimeMillis() < deadline && drawn == null) {
+                instrumentation.waitForIdleSync()
                 scenario.onActivity { activity ->
                     val list = activity.findViewById<RecyclerView>(R.id.pageList)
                     val slot = list.findViewHolderForAdapterPosition(0)?.itemView as? PageSlotView
+                    val snapshot = activity.viewModelSnapshot()
+                    state = "list=${list.width}x${list.height} items=${list.adapter?.itemCount} " +
+                        "pages=${snapshot.pageCount} stateError=${snapshot.error} " +
+                        "slot=${slot?.javaClass?.simpleName} renderedWidth=${slot?.renderedWidthPx()} " +
+                        "content=${slot?.hasContent()} error=${slot?.isShowingError()}"
                     val bitmap = slot?.currentBitmap()
                     if (bitmap != null && !bitmap.isRecycled && hasInk(bitmap)) {
                         drawn = bitmap
                     }
                 }
-                drawn != null
+                if (drawn == null) Thread.sleep(50)
+            }
+            if (drawn == null) {
+                throw AssertionError("first page never drawn within 45s; last state: $state")
             }
             // The placeholder must be gone; otherwise the user still sees "Rendering…".
             scenario.onActivity { activity ->

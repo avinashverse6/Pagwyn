@@ -351,21 +351,11 @@ jobs:
             adb logcat -c
             ls /tmp/pagwyn-results
             cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
-            python3 - <<'PYFAILS24' > /tmp/failures.txt 2>/dev/null || true
-            import glob, xml.etree.ElementTree as ET
-            for path in glob.glob('/tmp/pagwyn-results-*/**/TEST-*.xml', recursive=True):
-                try:
-                    root = ET.parse(path).getroot()
-                except Exception:
-                    continue
-                for case in root.iter('testcase'):
-                    for child in list(case.findall('failure')) + list(case.findall('error')):
-                        print(f"=== {case.get('classname')}#{case.get('name')}")
-                        print((child.get('message') or '').strip()[:400])
-                        body = (child.text or '').strip().splitlines()
-                        print("\n".join(line[:300] for line in body[:40]))
-                        print()
-            PYFAILS24
+            # Record what was archived. Parsing happens on the runner: the emulator
+            # image does not reliably ship python3, and a silent failure here used to
+            # produce an empty failure report for every API 24 run.
+            find /tmp/pagwyn-results -name 'TEST-*.xml' | sort > /tmp/pagwyn-results/xml-list.txt
+            wc -l /tmp/pagwyn-results/xml-list.txt
             cat /tmp/pagwyn-results/pdf-crash.txt /tmp/pagwyn-results/reader-crash.txt /tmp/pagwyn-results/home-crash.txt /tmp/pagwyn-results/settings-crash.txt > /tmp/pagwyn-results/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results -maxdepth 6 -name '*.*' | head -n 40
             echo "API24_SCRIPT_DONE"
@@ -546,7 +536,11 @@ jobs:
               lines += ["```", classes, "```", ""]
           if rows:
               lines += ["Failing:", ""] + rows[:20] + [""]
+              # API 24 is the legacy path and the one that still breaks, so its
+              # failures get full detail: the whole trace plus the innermost causes.
               for path in paths:
+                  legacy = not path.startswith('/tmp/pagwyn-results-34')
+                  limit = 400 if legacy else 25
                   try:
                       root = ET.parse(path).getroot()
                   except Exception:
@@ -555,8 +549,13 @@ jobs:
                       for child in case:
                           if child.tag not in ('failure', 'error'):
                               continue
-                          detail = ((child.text or '') + (child.get('message') or '')).strip().splitlines()
-                          lines += [f"`{case.get('name')}`:"] + [f"    {d.strip()[:220]}" for d in detail[:25]] + [""]
+                          message = (child.get('message') or '').strip()
+                          detail = (child.text or '').strip().splitlines()
+                          lines += [f"`{case.get('name')}`:"]
+                          if message:
+                              lines += [f"    message: {message[:400]}"]
+                          lines += [f"    {d.strip()[:240]}" for d in detail[:limit]]
+                          lines += [""]
           body = json.dumps({"body": "\n".join(lines)})
           req = urllib.request.Request(
               f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
