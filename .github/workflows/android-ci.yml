@@ -297,11 +297,19 @@ jobs:
             rm -rf /tmp/pagwyn-results
             mkdir -p /tmp/pagwyn-results
             adb logcat -c
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest,io.pagwyn.reader.LayoutInflationTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.LayoutInflationTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
             mkdir -p /tmp/pagwyn-results/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/pdf-crash.txt 2>&1
             # The main buffer holds the app's own close/render diagnostics.
             adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/pdf-app.txt 2>&1
+            adb logcat -c
+            # Its own invocation: this class opens the most documents, and on this image
+            # pdfium occasionally dies natively part-way through it. Separate markers keep
+            # that from masking the classes above.
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PageRenderingTest --stacktrace > /tmp/log-render.txt 2>&1 && touch /tmp/pagwyn-results/render.pass || touch /tmp/pagwyn-results/render.fail
+            mkdir -p /tmp/pagwyn-results/render && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/render/ 2>/dev/null
+            adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/render-crash.txt 2>&1
+            adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/render-app.txt 2>&1
             adb logcat -c
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.ReaderInstrumentedTest --stacktrace > /tmp/log-reader.txt 2>&1 && touch /tmp/pagwyn-results/reader.pass || touch /tmp/pagwyn-results/reader.fail
             mkdir -p /tmp/pagwyn-results/reader && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/reader/ 2>/dev/null
@@ -322,7 +330,7 @@ jobs:
             adb logcat -d -v brief -b main -s PagwynPdf:V PagwynRender:V PagwynTest:V > /tmp/pagwyn-results/settings-app.txt 2>&1
             adb logcat -c
             ls /tmp/pagwyn-results
-            cat /tmp/log-pdf.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log
+            cat /tmp/log-pdf.txt /tmp/log-render.txt /tmp/log-reader.txt /tmp/log-home.txt /tmp/log-settings.txt > /tmp/instrumented.log 2>/dev/null
             # Record what was archived. Parsing happens on the runner: the emulator
             # image does not reliably ship python3, and a silent failure here used to
             # produce an empty failure report for every API 24 run.
@@ -361,7 +369,7 @@ jobs:
           parts = []
           markers = []
           for root, label in (("/tmp/pagwyn-results-34", "API 34"), ("/tmp/pagwyn-results", "API 24")):
-              for name in ("pdf", "reader", "home", "settings"):
+              for name in ("pdf", "render", "reader", "home", "settings"):
                   if os.path.exists(f"{root}/{name}.pass"):
                       markers.append(f"{label} {name}: pass")
                   elif os.path.exists(f"{root}/{name}.fail"):
@@ -375,6 +383,7 @@ jobs:
               ("test failures (API 34)", "/tmp/failures34.txt", 5000),
               ("test failures (API 24)", "/tmp/failures.txt", 5000),
               ("app log (API 24, pdf)", "/tmp/pagwyn-results/pdf-app.txt", 8000),
+              ("app log (API 24, render)", "/tmp/pagwyn-results/render-app.txt", 5000),
               ("app log (API 24, reader)", "/tmp/pagwyn-results/reader-app.txt", 4000),
               ("crashes (API 24)", "/tmp/pagwyn-results/crashes.txt", 12000),
               ("crashes (API 34)", "/tmp/pagwyn-results-34/crashes.txt", 8000),
