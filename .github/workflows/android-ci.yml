@@ -263,7 +263,7 @@ jobs:
             rm -rf /tmp/pagwyn-results-34
             mkdir -p /tmp/pagwyn-results-34
             adb logcat -c
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest --stacktrace > /tmp/log34-pdf.txt 2>&1 && touch /tmp/pagwyn-results-34/pdf.pass || touch /tmp/pagwyn-results-34/pdf.fail
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest,io.pagwyn.reader.LayoutInflationTest --stacktrace > /tmp/log34-pdf.txt 2>&1 && touch /tmp/pagwyn-results-34/pdf.pass || touch /tmp/pagwyn-results-34/pdf.fail
             mkdir -p /tmp/pagwyn-results-34/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results-34/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results-34/pdf-crash.txt 2>&1
             adb logcat -c
@@ -333,7 +333,7 @@ jobs:
             rm -rf /tmp/pagwyn-results
             mkdir -p /tmp/pagwyn-results
             adb logcat -c
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest,io.pagwyn.reader.LayoutInflationTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
             mkdir -p /tmp/pagwyn-results/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/pdf-crash.txt 2>&1
             adb logcat -c

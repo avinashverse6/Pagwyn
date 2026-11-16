@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diagnostic probe: the hero kicker's attributes, which fail to inflate on API 24. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:alpha="0.85"
+    android:letterSpacing="0.14"
+    android:text="@string/home_continue_kicker"
+    android:textAllCaps="true"
+    android:textColor="@color/on_hero"
+    android:textSize="11sp" />
