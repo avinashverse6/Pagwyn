@@ -259,7 +259,7 @@ jobs:
             rm -rf /tmp/pagwyn-results-34
             mkdir -p /tmp/pagwyn-results-34
             adb logcat -c
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace > /tmp/log34-pdf.txt 2>&1 && touch /tmp/pagwyn-results-34/pdf.pass || touch /tmp/pagwyn-results-34/pdf.fail
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest --stacktrace > /tmp/log34-pdf.txt 2>&1 && touch /tmp/pagwyn-results-34/pdf.pass || touch /tmp/pagwyn-results-34/pdf.fail
             mkdir -p /tmp/pagwyn-results-34/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results-34/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results-34/pdf-crash.txt 2>&1
             adb logcat -c
@@ -294,11 +294,8 @@ jobs:
             PYFAILS34
             cat /tmp/pagwyn-results-34/pdf-crash.txt /tmp/pagwyn-results-34/reader-crash.txt /tmp/pagwyn-results-34/home-crash.txt /tmp/pagwyn-results-34/settings-crash.txt > /tmp/pagwyn-results-34/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results-34 -maxdepth 6 -name '*.*' | head -n 40
-            if [ -e /tmp/pagwyn-results-34/pdf.fail ] || [ -e /tmp/pagwyn-results-34/reader.fail ] || [ -e /tmp/pagwyn-results-34/home.fail ] || [ -e /tmp/pagwyn-results-34/settings.fail ]; then
-              echo "API34_RESULT=failure" | tee /tmp/emulator34-tail.txt
-              exit 1
-            fi
-            echo "API34_RESULT=success" | tee /tmp/emulator34-tail.txt
+            echo "API34_SCRIPT_DONE" | tee /tmp/emulator34-tail.txt
+            exit 0
 
       # The API 24 (Android 7.0) image is used deliberately: it is the oldest supported
       # version, so it exercises the strictest platform behaviour. It is also the least
@@ -332,7 +329,7 @@ jobs:
             rm -rf /tmp/pagwyn-results
             mkdir -p /tmp/pagwyn-results
             adb logcat -c
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.pagwyn.reader.PdfDocumentTest,io.pagwyn.reader.PageRenderingTest --stacktrace > /tmp/log-pdf.txt 2>&1 && touch /tmp/pagwyn-results/pdf.pass || touch /tmp/pagwyn-results/pdf.fail
             mkdir -p /tmp/pagwyn-results/pdf && cp -r app/build/outputs/androidTest-results/. /tmp/pagwyn-results/pdf/ 2>/dev/null
             adb logcat -d -v brief -b crash >> /tmp/pagwyn-results/pdf-crash.txt 2>&1
             adb logcat -c
@@ -367,11 +364,28 @@ jobs:
             PYFAILS24
             cat /tmp/pagwyn-results/pdf-crash.txt /tmp/pagwyn-results/reader-crash.txt /tmp/pagwyn-results/home-crash.txt /tmp/pagwyn-results/settings-crash.txt > /tmp/pagwyn-results/crashes.txt 2>/dev/null
             find /tmp/pagwyn-results -maxdepth 6 -name '*.*' | head -n 40
-            if [ -e /tmp/pagwyn-results/pdf.fail ] || [ -e /tmp/pagwyn-results/reader.fail ] || [ -e /tmp/pagwyn-results/home.fail ] || [ -e /tmp/pagwyn-results/settings.fail ]; then
-              echo "API24_RESULT=failure"
+            echo "API24_SCRIPT_DONE"
+            exit 0
+
+
+      # Gating step for the primary device suite. Kept separate from the emulator step
+      # because the emulator action's exit status reflects the emulator's lifecycle as
+      # much as the tests; the markers written above are the real result.
+      - name: Gate on API 34 instrumented results
+        if: always() && steps.emulator34.outcome != 'skipped'
+        run: |
+          set -e
+          for marker in pdf reader home settings; do
+            if [ -e "/tmp/pagwyn-results-34/$marker.fail" ]; then
+              echo "::error::API 34 instrumented tests failed: $marker"
               exit 1
             fi
-            echo "API24_RESULT=success"
+            if [ ! -e "/tmp/pagwyn-results-34/$marker.pass" ]; then
+              echo "::error::API 34 instrumented tests never ran: $marker"
+              exit 1
+            fi
+          done
+          echo "API 34 instrumented suite: all four classes passed"
 
       - name: Post emulator run log
         if: always() && (steps.emulator.outcome != 'skipped' || steps.emulator34.outcome != 'skipped')
